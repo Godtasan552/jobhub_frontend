@@ -8,6 +8,8 @@ abstract class AppRoutes {
   static const FORGET_PASSWORD = '/forget-password';
   static const HOME = '/home'; // สำหรับในอนาคต
   static const PROFILE = '/profile'; // สำหรับในอนาคต
+  static const String DASHBOARD = '/dashboard';
+  static const String JOB_DETAIL = '/job-detail';
 
   // Helper methods สำหรับการนำทาง
   static String getSplashRoute() => SPLASH;
@@ -16,4 +18,6 @@ abstract class AppRoutes {
   static String getForgetPasswordRoute() => FORGET_PASSWORD;
   static String getHomeRoute() => HOME;
   static String getProfileRoute() => PROFILE;
+  static String getDashboardRoute() => DASHBOARD;
+  static String getJobDetailRoute() => JOB_DETAIL;
 }

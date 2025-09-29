@@ -5,6 +5,7 @@ import '../screens/splash_screen.dart';
 import '../screens/login.dart';
 import '../screens/regis.dart';
 import '../screens/forget_pass.dart';
+import '../screens/dashboard_Screen.dart';
 
 class AppPages {
   AppPages._();
@@ -39,6 +40,12 @@ class AppPages {
       name: AppRoutes.FORGET_PASSWORD,
       page: () => const ForgetPasswordScreen(),
       transition: Transition.cupertino,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.DASHBOARD,
+      page: () => const dashboardScreen(),
+      transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
     ),
 

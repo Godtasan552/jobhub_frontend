@@ -65,11 +65,12 @@ class NavigationHelper {
   }
 
   /// ไปหน้า Home (สำหรับอนาคต)
-  static Future<void> toHome({bool clearStack = true}) async {
+  // lib/utils/navigation_helper.dart (เพิ่ม method)
+  static void toHome({bool clearStack = false}) {
     if (clearStack) {
-      await offAllNamed(AppRoutes.HOME);
+      Get.offAllNamed(AppRoutes.DASHBOARD);
     } else {
-      await toNamed(AppRoutes.HOME);
+      Get.toNamed(AppRoutes.DASHBOARD);
     }
   }
 
