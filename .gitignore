@@ -169,6 +169,13 @@ app.*.symbols
 
 # Obfuscation related
 app.*.map.json
+# Flutter
+.build/
+.dart_tool/
+.packages
+pubspec.lock
+.env
+
 
 # Android Studio will place build artifacts here
 /android/app/debug
