@@ -5,7 +5,6 @@ import '../screens/splash_screen.dart';
 import '../screens/login.dart';
 import '../screens/regis.dart';
 import '../screens/forget_pass.dart';
-import '../screens/dashboard_Screen.dart';
 import '../component/bottom_nav.dart';
 import '../screens/profilePage.dart';
 

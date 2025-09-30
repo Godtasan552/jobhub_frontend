@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:form_validate/screens/create_job.dart';
 import 'package:form_validate/screens/dashboard_Screen.dart';
 import 'package:form_validate/screens/profilePage.dart';
-import 'package:get/get_connect/http/src/utils/utils.dart';
 
 class BottomNav extends StatefulWidget {
   const BottomNav({super.key});
