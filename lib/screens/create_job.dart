@@ -112,7 +112,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         return;
       }
 
-      final String baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://localhost:5000';
+      final String baseUrl = dotenv.env['BASE_URL'] ?? 'http://localhost:5000';
 
       // แปลง requirements จาก string เป็น array
       List<String> requirements = _requirementsController.text
@@ -371,7 +371,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                       onTap: _selectDeadline,
                       child: InputDecorator(
                         decoration: const InputDecoration(
-                          labelText: 'วันที่สิ้นสุดรับสมัคร (ไม่บังคับ)',
+                          labelText: 'วันที่สิ้นสุดรับสมัคร',
                           prefixIcon: Icon(Icons.calendar_today),
                         ),
                         child: Text(
