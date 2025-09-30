@@ -7,6 +7,8 @@ import '../screens/regis.dart';
 import '../screens/forget_pass.dart';
 import '../screens/dashboard_Screen.dart';
 import '../component/bottom_nav.dart';
+import '../screens/profilePage.dart';
+
 class AppPages {
   AppPages._();
 
@@ -47,7 +49,12 @@ class AppPages {
       page: () => const BottomNav(),
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
-
+    ),
+    GetPage(
+      name: AppRoutes.PROFILE,
+      page: () => const ProfilePage(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
     ),
 
     // อนาคตสามารถเพิ่ม routes อื่นๆ ได้ที่นี่

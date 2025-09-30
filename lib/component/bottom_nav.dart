@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:form_validate/screens/create_job.dart';
 import 'package:form_validate/screens/dashboard_Screen.dart';
+import 'package:form_validate/screens/profilePage.dart';
+import 'package:get/get_connect/http/src/utils/utils.dart';
 
 class BottomNav extends StatefulWidget {
   const BottomNav({super.key});
@@ -15,8 +17,9 @@ class _BottomNavState extends State<BottomNav> {
   final List<Widget> _pages = [
     const dashboardScreen(),
     const CreateJobScreen(),
-    Center(child: Text("Nontification")),
-    Center(child: Text("Settings")),
+    Center(child: Text("chat"),), 
+    Center(child: Text("notifications"),),
+    const ProfilePage(),
   ];
 
   void _onItemTapped(int index) {
@@ -45,12 +48,12 @@ class _BottomNavState extends State<BottomNav> {
             label: "Chat",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person),
+            icon: Icon(Icons.blender_outlined),
             label: "Nontification",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: "Setting",
+            icon: Icon(Icons.person),
+            label: "Profile",
           ),
         ],
         currentIndex: _selectedIndex,
