@@ -1,5 +1,7 @@
+// lib/screens/splash_screen.dart
 import 'package:flutter/material.dart';
 import '../utils/navigation_helper.dart';
+import '../services/auth_service.dart'; //  ต้อง import
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -25,19 +27,16 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _initAnimations() {
-    // Logo animation controller
     _logoController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
 
-    // Text animation controller
     _textController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
 
-    // Logo animations
     _logoScaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
     );
@@ -49,7 +48,6 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // Text animations
     _textOpacityAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -62,47 +60,32 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _startSplashSequence() async {
-    // เริ่ม logo animation
     _logoController.forward();
-
-    // รอ 800ms แล้วเริ่ม text animation
     await Future.delayed(const Duration(milliseconds: 800));
     _textController.forward();
-
-    // รอให้ animation เสร็จ แล้วตรวจสอบสถานะผู้ใช้
     await Future.delayed(const Duration(milliseconds: 2200));
     _checkUserStatus();
   }
 
   Future<void> _checkUserStatus() async {
     try {
-      // จำลองการตรวจสอบสถานะผู้ใช้
-      // ในอนาคตอาจตรวจสอบจาก SharedPreferences หรือ Secure Storage
-      await Future.delayed(const Duration(milliseconds: 500));
+      // ✅ เรียก AuthService.getToken() จริงๆ
+      final token = AuthService.getToken();
+      
+      // Debug: แสดง token ใน console
+      print('🔍 Token from storage: ${token ?? "NULL"}');
 
-      // ตรวจสอบว่าผู้ใช้เคยล็อกอินหรือไม่
-      final isLoggedIn = await _checkLoginStatus();
-
-      if (isLoggedIn) {
-        // ถ้าล็อกอินแล้ว ไปหน้า Home (ถ้ามี)
-        // NavigationHelper.toHome(clearStack: true);
-
-        // ปัจจุบันยังไม่มีหน้า Home ดังนั้นไปหน้า Login ก่อน
-        NavigationHelper.offAllNamed('/login');
+      if (token != null && token.isNotEmpty) {
+        print('✅ Token found - Going to Dashboard');
+        NavigationHelper.offAllNamed('/dashboard');
       } else {
-        // ถ้ายังไม่ล็อกอิน ไปหน้า Login
+        print('❌ No token - Going to Login');
         NavigationHelper.offAllNamed('/login');
       }
     } catch (e) {
-      // ถ้าเกิดข้อผิดพลาด ไปหน้า Login
+      print('⚠️ Error checking token: $e');
       NavigationHelper.offAllNamed('/login');
     }
-  }
-
-  Future<bool> _checkLoginStatus() async {
-    // จำลองการตรวจสอบ token หรือสถานะล็อกอิน
-    // return await StorageService.hasValidToken();
-    return false; // ปัจจุบันไม่มีการจัดเก็บ state
   }
 
   @override
@@ -127,12 +110,10 @@ class _SplashScreenState extends State<SplashScreen>
         child: SafeArea(
           child: Column(
             children: [
-              // Main Content
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo Animation
                     AnimatedBuilder(
                       animation: _logoController,
                       builder: (context, child) {
@@ -164,10 +145,7 @@ class _SplashScreenState extends State<SplashScreen>
                         );
                       },
                     ),
-
                     const SizedBox(height: 40),
-
-                    // App Title Animation
                     AnimatedBuilder(
                       animation: _textController,
                       builder: (context, child) {
@@ -207,10 +185,7 @@ class _SplashScreenState extends State<SplashScreen>
                         );
                       },
                     ),
-
                     const SizedBox(height: 60),
-
-                    // Loading Indicator
                     AnimatedBuilder(
                       animation: _textController,
                       builder: (context, child) {
@@ -245,8 +220,6 @@ class _SplashScreenState extends State<SplashScreen>
                   ],
                 ),
               ),
-
-              // Footer
               AnimatedBuilder(
                 animation: _textController,
                 builder: (context, child) {
