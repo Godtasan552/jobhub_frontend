@@ -49,6 +49,13 @@ class AppPages {
       transitionDuration: const Duration(milliseconds: 300),
 
     ),
+    GetPage(
+      name: AppRoutes.DASHBOARD,
+      page: () => const DashboardScreen(),  // ✅ เปลี่ยนชื่อ
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 300),
+
+    ),
 
     // อนาคตสามารถเพิ่ม routes อื่นๆ ได้ที่นี่
     /*

@@ -13,7 +13,7 @@ class _BottomNavState extends State<BottomNav> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    const dashboardScreen(),
+    const DashboardScreen(),
     const CreateJobScreen(),
     Center(child: Text("Nontification")),
     Center(child: Text("Settings")),
