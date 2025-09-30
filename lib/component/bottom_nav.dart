@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:form_validate/screens/chat.dart';
 import 'package:form_validate/screens/create_job.dart';
 import 'package:form_validate/screens/dashboard_Screen.dart';
 
@@ -15,6 +16,7 @@ class _BottomNavState extends State<BottomNav> {
   final List<Widget> _pages = [
     const DashboardScreen(),
     const CreateJobScreen(),
+    const Chatsceen(),
     Center(child: Text("Nontification")),
     Center(child: Text("Settings")),
   ];

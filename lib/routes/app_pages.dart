@@ -1,3 +1,4 @@
+import 'package:form_validate/screens/chat.dart';
 import 'package:get/get.dart';
 import 'app_routes.dart';
 
@@ -52,6 +53,13 @@ class AppPages {
     GetPage(
       name: AppRoutes.DASHBOARD,
       page: () => const DashboardScreen(),  // ✅ เปลี่ยนชื่อ
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 300),
+
+    ),
+    GetPage(
+      name: AppRoutes.CHAT,
+      page: () => const Chatsceen(),  // ✅ เปลี่ยนชื่อ
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
 
