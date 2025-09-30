@@ -7,14 +7,14 @@ import '../utils/navigation_helper.dart';
 import '../routes/app_routes.dart';
 import 'package:intl/intl.dart';
 
-class dashboardScreen extends StatefulWidget {
-  const dashboardScreen({super.key});
+class DashboardScreen extends StatefulWidget {  // ✅ แก้ชื่อ
+  const DashboardScreen({super.key});
 
   @override
-  State<dashboardScreen> createState() => _DashboardScreenState();
+  State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<dashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen> {  // ✅ แก้ชื่อ
   List<JobModel> _jobs = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -33,52 +33,55 @@ class _DashboardScreenState extends State<dashboardScreen> {
 
     try {
       final result = await JobService.getAllJobs();
+      
+      print('📦 Job Service Result: $result'); // Debug
 
       if (result['success'] == true) {
         setState(() {
           _jobs = result['jobs'];
           _isLoading = false;
         });
+        print('✅ Loaded ${_jobs.length} jobs');
       } else {
         setState(() {
           _errorMessage = result['message'];
           _isLoading = false;
         });
+        print('❌ Error: ${result['message']}');
       }
     } catch (e) {
       setState(() {
         _errorMessage = 'เกิดข้อผิดพลาด: $e';
         _isLoading = false;
       });
+      print('⚠️ Exception: $e');
     }
   }
 
-  void _logout() {
-    showDialog(
+  void _logout() async {  // ✅ เพิ่ม async
+    final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('ออกจากระบบ'),
         content: const Text('คุณต้องการออกจากระบบหรือไม่?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('ยกเลิก'),
           ),
           ElevatedButton(
-            onPressed: () {
-              AuthService.logout();
-              Navigator.pop(context);
-              Navigator.pushReplacementNamed(
-                context,
-                AppRoutes.getLoginRoute(),
-              );
-            },
+            onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('ออกจากระบบ'),
           ),
         ],
       ),
     );
+
+    if (confirm == true) {
+      await AuthService.logout();  // ✅ await
+      NavigationHelper.offAllNamed('/login');  // ✅ ใช้ NavigationHelper
+    }
   }
 
   Color _getStatusColor(String status) {
@@ -135,6 +138,7 @@ class _DashboardScreenState extends State<dashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('งานทั้งหมด'),
+        automaticallyImplyLeading: false,  // ✅ ซ่อนปุ่ม back
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: _loadJobs),
           IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
@@ -143,51 +147,56 @@ class _DashboardScreenState extends State<dashboardScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-                  const SizedBox(height: 16),
-                  Text(
-                    _errorMessage!,
-                    style: const TextStyle(fontSize: 16),
-                    textAlign: TextAlign.center,
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline,
+                            size: 64, color: Colors.red[300]),
+                        const SizedBox(height: 16),
+                        Text(
+                          _errorMessage!,
+                          style: const TextStyle(fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _loadJobs,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('ลองใหม่'),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: _loadJobs,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('ลองใหม่'),
-                  ),
-                ],
-              ),
-            )
-          : _jobs.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.work_off, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'ไม่มีงานในขณะนี้',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                ],
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: _loadJobs,
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _jobs.length,
-                itemBuilder: (context, index) {
-                  final job = _jobs[index];
-                  return _buildJobCard(job);
-                },
-              ),
-            ),
+                )
+              : _jobs.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.work_off,
+                              size: 64, color: Colors.grey[400]),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'ไม่มีงานในขณะนี้',
+                            style: TextStyle(fontSize: 18, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _loadJobs,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _jobs.length,
+                        itemBuilder: (context, index) {
+                          final job = _jobs[index];
+                          return _buildJobCard(job);
+                        },
+                      ),
+                    ),
     );
   }
 

@@ -14,6 +14,9 @@ class JobService {
       final token = AuthService.getToken();
       final url = Uri.parse('$baseUrl/api/v1/jobs');
 
+      print('🌐 Fetching jobs from: $url');
+      print('🔑 Token exists: ${token != null}');
+
       final response = await http.get(
         url,
         headers: {
@@ -21,6 +24,9 @@ class JobService {
           if (token != null) "Authorization": "Bearer $token",
         },
       );
+
+      print('📡 Response status: ${response.statusCode}');
+      print('📄 Response body: ${response.body}');
 
       final data = jsonDecode(response.body);
 
@@ -37,6 +43,7 @@ class JobService {
         'message': data['message'] ?? 'ไม่สามารถดึงข้อมูลงานได้',
       };
     } catch (e) {
+      print('❌ JobService Error: $e');
       return {'success': false, 'message': 'เกิดข้อผิดพลาด: $e'};
     }
   }
