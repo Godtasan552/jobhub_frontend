@@ -51,9 +51,24 @@ class AuthService {
     final data = jsonDecode(response.body);
 
     if (data['success'] == true) {
-      // เก็บ token ลง storage
-      _storage.write('token', data['data']['token']);
-      _storage.write('user', data['data']['user']);
+      final accessToken = data['data']['tokens']['accessToken'];
+      final refreshToken = data['data']['tokens']['refreshToken'];
+      final user = data['data']['user'];
+
+      if (accessToken != null) {
+        await _storage.write('token', accessToken);
+        await _storage.write('refreshToken', refreshToken);
+        await _storage.write('user', user);
+        
+        print('✅ Token saved successfully');
+        print('👤 User: ${user['name']} (${user['email']})');
+        
+        // ตรวจสอบว่าบันทึกสำเร็จ
+        final savedToken = _storage.read('token');
+        print('📖 Token stored: ${savedToken != null ? "Yes" : "No"}');
+      } else {
+        print('❌ No accessToken in response');
+      }
     }
 
     return data;
@@ -61,12 +76,24 @@ class AuthService {
 
   /// ดึง token ที่เก็บไว้
   static String? getToken() {
-    return _storage.read('token');
+    final token = _storage.read('token');
+    print('📖 getToken called, returning: ${token != null ? "Token exists" : "NULL"}');
+    return token;
+  }
+
+  /// ดึง refresh token
+  static String? getRefreshToken() {
+    return _storage.read('refreshToken');
+  }
+
+  /// ดึงข้อมูล User
+  static Map<String, dynamic>? getUser() {
+    return _storage.read('user');
   }
 
   /// logout
-  static void logout() {
-    _storage.erase();
+  static Future<void> logout() async {
+    await _storage.erase();
+    print('🗑️ Storage cleared');
   }
 }
-      

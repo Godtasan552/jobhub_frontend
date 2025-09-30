@@ -1,6 +1,7 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
+import 'package:get_storage/get_storage.dart'; // ✅ เพิ่มบรรทัดนี้
 import 'routes/app_pages.dart';
 import 'routes/app_routes.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -8,11 +9,16 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // ✅ ต้องมีบรรทัดนี้
   await GetStorage.init();
-  await dotenv.load(fileName: ".env"); // โหลด ENV
+  print('✅ GetStorage initialized');
+  
+  await dotenv.load(fileName: ".env");
   runApp(const MainApp());
 }
 
+// ส่วนที่เหลือไม่ต้องแก้อะไร
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
@@ -23,14 +29,8 @@ class MainApp extends StatelessWidget {
       
       
       title: 'Form Validate App',
-
-      // กำหนด initial route เป็น Splash Screen
       initialRoute: AppRoutes.SPLASH,
-      
-      // กำหนด pages และ routes
       getPages: AppPages.routes,
-
-      // กำหนด route ที่ไม่พบ
       unknownRoute: GetPage(
         name: '/notfound',
         page: () => Scaffold(
@@ -52,26 +52,21 @@ class MainApp extends StatelessWidget {
           ),
         ),
       ),
-
       theme: ThemeData(
         scaffoldBackgroundColor: const Color.fromARGB(255, 255, 255, 255),
         primarySwatch: Colors.blue,
         primaryColor: Colors.blue[700],
-
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.blue,
           foregroundColor: Colors.white,
           elevation: 2,
           centerTitle: true,
         ),
-        
-
         textTheme: const TextTheme(
           bodyLarge: TextStyle(fontSize: 18, color: Colors.black),
           bodyMedium: TextStyle(fontSize: 16, color: Colors.black54),
           bodySmall: TextStyle(fontSize: 14, color: Colors.black54),
         ),
-
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.blue,
@@ -88,7 +83,6 @@ class MainApp extends StatelessWidget {
             elevation: 2,
           ),
         ),
-
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
             foregroundColor: Colors.blue[600],
@@ -98,7 +92,6 @@ class MainApp extends StatelessWidget {
             ),
           ),
         ),
-
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
