@@ -6,7 +6,7 @@ import '../screens/login.dart';
 import '../screens/regis.dart';
 import '../screens/forget_pass.dart';
 import '../screens/dashboard_Screen.dart';
-
+import '../component/bottom_nav.dart';
 class AppPages {
   AppPages._();
 
@@ -44,9 +44,10 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.DASHBOARD,
-      page: () => const dashboardScreen(),
+      page: () => const BottomNav(),
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
+
     ),
 
     // อนาคตสามารถเพิ่ม routes อื่นๆ ได้ที่นี่

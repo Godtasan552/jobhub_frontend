@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'routes/app_pages.dart';
 import 'routes/app_routes.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../component/bottom_nav.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,11 +18,13 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
+      
+      
       title: 'Form Validate App',
 
       // กำหนด initial route เป็น Splash Screen
       initialRoute: AppRoutes.SPLASH,
-
+      
       // กำหนด pages และ routes
       getPages: AppPages.routes,
 
@@ -59,6 +62,7 @@ class MainApp extends StatelessWidget {
           elevation: 2,
           centerTitle: true,
         ),
+        
 
         textTheme: const TextTheme(
           bodyLarge: TextStyle(fontSize: 18, color: Colors.black),
