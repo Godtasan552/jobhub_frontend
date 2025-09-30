@@ -3,7 +3,12 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart'; 
+import 'package:http_parser/http_parser.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -14,7 +19,10 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final storage = GetStorage();
+  final ImagePicker _picker = ImagePicker();
+  
   bool _isLoading = true;
+  bool _isUploading = false;
   Map<String, dynamic>? _userData;
   String? _errorMessage;
 
@@ -51,9 +59,6 @@ class _ProfilePageState extends State<ProfilePage> {
         },
       );
 
-      print('Profile Response: ${response.statusCode}');
-      print('Profile Body: ${response.body}');
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         
@@ -63,7 +68,6 @@ class _ProfilePageState extends State<ProfilePage> {
             _isLoading = false;
           });
           
-          // อัพเดท storage
           await storage.write('user', data['data']);
         } else {
           setState(() {
@@ -78,12 +82,243 @@ class _ProfilePageState extends State<ProfilePage> {
         });
       }
     } catch (e) {
-      print('Error loading profile: $e');
       setState(() {
         _errorMessage = 'เกิดข้อผิดพลาด: $e';
         _isLoading = false;
       });
     }
+  }
+Future<void> _uploadProfilePicture(File imageFile) async {
+  try {
+    final token = storage.read('token');
+    
+    if (token == null) {
+      Get.snackbar(
+        'Error',
+        'ไม่พบ Token กรุณาเข้าสู่ระบบใหม่',
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[900],
+        snackPosition: SnackPosition.TOP,
+      );
+      return;
+    }
+
+    final String baseUrl = dotenv.env['BASE_URL'] ?? 'http://localhost:5000';
+
+    print('📸 Image path: ${imageFile.path}');
+    print('📸 Image size: ${await imageFile.length()} bytes');
+
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/api/v1/auth/upload-profile-picture'),
+    );
+
+    request.headers['Authorization'] = 'Bearer $token';
+    
+    // ตรวจสอบนามสกุลไฟล์และกำหนด content type
+    String fileName = imageFile.path.split('/').last;
+    String extension = fileName.split('.').last.toLowerCase();
+    
+    String contentType;
+    if (extension == 'jpg' || extension == 'jpeg') {
+      contentType = 'image/jpeg';
+    } else if (extension == 'png') {
+      contentType = 'image/png';
+    } else if (extension == 'gif') {
+      contentType = 'image/gif';
+    } else {
+      // ถ้าไม่รู้จักนามสกุล ให้ใช้ jpeg เป็น default
+      contentType = 'image/jpeg';
+      fileName = '${fileName.split('.').first}.jpg';
+    }
+
+    print('📦 File name: $fileName');
+    print('📦 Content type: $contentType');
+    
+    // เพิ่มไฟล์พร้อม content type ที่ชัดเจน
+    var multipartFile = http.MultipartFile(
+      'profilePicture',
+      imageFile.readAsBytes().asStream(),
+      await imageFile.length(),
+      filename: fileName,
+      contentType: MediaType.parse(contentType),
+    );
+    
+    request.files.add(multipartFile);
+
+    print('🚀 Uploading to: ${request.url}');
+    
+    var streamedResponse = await request.send();
+    var response = await http.Response.fromStream(streamedResponse);
+
+    print('📡 Status: ${response.statusCode}');
+    print('📡 Body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      
+      if (data['success'] == true) {
+        Get.snackbar(
+          'สำเร็จ',
+          'อัปโหลดรูปโปรไฟล์สำเร็จ',
+          backgroundColor: Colors.green[100],
+          colorText: Colors.green[900],
+          snackPosition: SnackPosition.TOP,
+        );
+
+        await _loadProfile();
+      } else {
+        Get.snackbar(
+          'Error',
+          data['message'] ?? 'ไม่สามารถอัปโหลดรูปได้',
+          backgroundColor: Colors.red[100],
+          colorText: Colors.red[900],
+          snackPosition: SnackPosition.TOP,
+        );
+      }
+    } else {
+      String errorMsg = 'Error ${response.statusCode}';
+      try {
+        final data = json.decode(response.body);
+        errorMsg = data['message'] ?? data['error'] ?? errorMsg;
+      } catch (e) {
+        errorMsg = response.body;
+      }
+      
+      Get.snackbar(
+        'Error',
+        errorMsg,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[900],
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 5),
+      );
+    }
+  } catch (e, stackTrace) {
+    print('❌ Error: $e');
+    print('❌ Stack: $stackTrace');
+    Get.snackbar(
+      'Error',
+      'เกิดข้อผิดพลาด: $e',
+      backgroundColor: Colors.red[100],
+      colorText: Colors.red[900],
+      snackPosition: SnackPosition.TOP,
+    );
+  }
+}
+Future<void> _pickAndUploadImage(ImageSource source) async {
+  try {
+    // ขอ permission ก่อน
+    PermissionStatus permission;
+    
+    if (source == ImageSource.camera) {
+      permission = await Permission.camera.request();
+    } else {
+      // สำหรับ Android 13+ (API 33+) ใช้ photos
+      // สำหรับ Android 12 ขึ้นไปแต่ต่ำกว่า 13 ใช้ storage
+      if (Platform.isAndroid) {
+        final androidInfo = await DeviceInfoPlugin().androidInfo;
+        if (androidInfo.version.sdkInt >= 33) {
+          permission = await Permission.photos.request();
+        } else {
+          permission = await Permission.storage.request();
+        }
+      } else {
+        // iOS
+        permission = await Permission.photos.request();
+      }
+    }
+
+    if (permission.isDenied || permission.isPermanentlyDenied) {
+      Get.snackbar(
+        'ไม่อนุญาต',
+        source == ImageSource.camera 
+            ? 'กรุณาอนุญาตให้เข้าถึงกล้องในการตั้งค่า'
+            : 'กรุณาอนุญาตให้เข้าถึงรูปภาพในการตั้งค่า',
+        backgroundColor: Colors.orange[100],
+        colorText: Colors.orange[900],
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 3),
+        mainButton: TextButton(
+          onPressed: () => openAppSettings(),
+          child: const Text('เปิดการตั้งค่า'),
+        ),
+      );
+      return;
+    }
+
+    final XFile? image = await _picker.pickImage(
+      source: source,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+
+    if (image == null) return;
+
+    setState(() {
+      _isUploading = true;
+    });
+
+    await _uploadProfilePicture(File(image.path));
+  } catch (e) {
+    print('Error picking image: $e');
+    Get.snackbar(
+      'Error',
+      'เกิดข้อผิดพลาด: $e',
+      backgroundColor: Colors.red[100],
+      colorText: Colors.red[900],
+      snackPosition: SnackPosition.TOP,
+    );
+  } finally {
+    setState(() {
+      _isUploading = false;
+    });
+  }
+}
+
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'เลือกรูปโปรไฟล์',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Colors.blue),
+                title: const Text('ถ่ายรูป'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAndUploadImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.blue),
+                title: const Text('เลือกจากแกลเลอรี่'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAndUploadImage(ImageSource.gallery);
+                },
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _logout() async {
@@ -185,31 +420,73 @@ class _ProfilePageState extends State<ProfilePage> {
               padding: const EdgeInsets.all(32),
               child: Column(
                 children: [
-                  // Profile Picture
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundColor: Colors.white,
-                    child: _userData?['profilePic'] != null
-                        ? ClipOval(
-                            child: Image.network(
-                              _userData!['profilePic'],
-                              width: 120,
-                              height: 120,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(
-                                  Icons.person,
-                                  size: 60,
-                                  color: Colors.blue[700],
-                                );
-                              },
+                  // Profile Picture with Edit Button
+                  Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 60,
+                        backgroundColor: Colors.white,
+                        child: _userData?['profilePic'] != null
+                            ? ClipOval(
+                                child: Image.network(
+                                  _userData!['profilePic'],
+                                  width: 120,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      Icons.person,
+                                      size: 60,
+                                      color: Colors.blue[700],
+                                    );
+                                  },
+                                ),
+                              )
+                            : Icon(
+                                Icons.person,
+                                size: 60,
+                                color: Colors.blue[700],
+                              ),
+                      ),
+                      
+                      // Upload Button Overlay
+                      if (_isUploading)
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              shape: BoxShape.circle,
                             ),
-                          )
-                        : Icon(
-                            Icons.person,
-                            size: 60,
-                            color: Colors.blue[700],
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
+                        ),
+                      
+                      // Edit Button
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: _isUploading ? null : _showImageSourceDialog,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.blue[700],
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   

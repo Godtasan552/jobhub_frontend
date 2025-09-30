@@ -14,7 +14,9 @@ dependencies:
   http: ^1.5.0
   get_storage: ^2.1.1  # เก็บ JWT token แบบ local
   intl: ^0.20.2 
-
+  image_picker: ^1.0.7
+  permission_handler: ^11.0.1
+  device_info_plus: ^10.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
