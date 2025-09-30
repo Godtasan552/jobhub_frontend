@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'routes/app_pages.dart';
 import 'routes/app_routes.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import '../component/bottom_nav.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await GetStorage.init();
   await dotenv.load(fileName: ".env"); // โหลด ENV
   runApp(const MainApp());
 }

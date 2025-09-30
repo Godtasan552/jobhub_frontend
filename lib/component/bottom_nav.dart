@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:form_validate/screens/create_job.dart';
 import 'package:form_validate/screens/dashboard_Screen.dart';
 
 class BottomNav extends StatefulWidget {
@@ -13,9 +14,9 @@ class _BottomNavState extends State<BottomNav> {
 
   final List<Widget> _pages = [
     const dashboardScreen(),
-    Center(child: Text("ค้นหา")),
-    Center(child: Text("โปรไฟล์")),
-    Center(child: Text("การตั้งค่า")),
+    const CreateJobScreen(),
+    Center(child: Text("Nontification")),
+    Center(child: Text("Settings")),
   ];
 
   void _onItemTapped(int index) {
@@ -33,19 +34,23 @@ class _BottomNavState extends State<BottomNav> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
-            label: "หน้าแรก",
+            label: "Home",
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.search),
-            label: "สร้างงาน",
+            label: "CreateJob",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat),
+            label: "Chat",
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
-            label: "โปรไฟล์",
+            label: "Nontification",
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
-            label: "ตั้งค่า",
+            label: "Setting",
           ),
         ],
         currentIndex: _selectedIndex,

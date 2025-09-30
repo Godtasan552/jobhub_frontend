@@ -14,6 +14,7 @@ dependencies:
   http: ^1.5.0
   get_storage: ^2.1.1  # เก็บ JWT token แบบ local
   intl: ^0.18.1 
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:
