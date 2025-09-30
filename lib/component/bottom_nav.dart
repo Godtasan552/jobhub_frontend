@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:form_validate/screens/create_job.dart';
 import 'package:form_validate/screens/dashboard_Screen.dart';
+import 'package:form_validate/screens/notification.dart';
 import 'package:form_validate/screens/profilePage.dart';
 
 class BottomNav extends StatefulWidget {
@@ -17,7 +18,7 @@ class _BottomNavState extends State<BottomNav> {
     const DashboardScreen(),
     const CreateJobScreen(),
     Center(child: Text("chat haha"),), 
-    Center(child: Text("notifications"),),
+    const NotificationScreen(),
     const ProfilePage(),
   ];
 
