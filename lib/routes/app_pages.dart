@@ -58,6 +58,7 @@ class AppPages {
 
     ),
 
+    // Detail Page
    GetPage(
       name: AppRoutes.JOB_DETAIL,
       page: () => const job_detail(),
