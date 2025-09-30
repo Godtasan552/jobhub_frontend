@@ -1,22 +1,33 @@
+
 import 'package:flutter/material.dart';
 import 'package:form_validate/screens/create_job.dart';
 import 'package:form_validate/screens/dashboard_Screen.dart';
+import 'package:get/get.dart';
 
 class BottomNav extends StatefulWidget {
-  const BottomNav({super.key});
+  final int initialIndex; // เพิ่มพารามิเตอร์นี้
+  
+  const BottomNav({super.key, this.initialIndex = 0});
 
   @override
-  _BottomNavState createState() => _BottomNavState();
+      State<BottomNav> createState() => _BottomNavState(); // แก้ตรงนี้ด้วย
 }
 
 class _BottomNavState extends State<BottomNav> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex; // ใช้ค่าที่ส่งมา
+  }
 
   final List<Widget> _pages = [
     const DashboardScreen(),
     const CreateJobScreen(),
-    Center(child: Text("Nontification")),
-    Center(child: Text("Settings")),
+    const Center(child: Text("Chat")),
+    const Center(child: Text("Notification")),
+    const Center(child: Text("Notification")),
   ];
 
   void _onItemTapped(int index) {
@@ -29,34 +40,40 @@ class _BottomNavState extends State<BottomNav> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: "Home",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: "CreateJob",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat),
-            label: "Chat",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: "Nontification",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: "Setting",
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.blue,
-        onTap: _onItemTapped,
-      ),
+      bottomNavigationBar: buildBottomNavigationBar(_selectedIndex, _onItemTapped),
     );
   }
+}
+
+// สร้าง static method สำหรับสร้าง BottomNavigationBar
+BottomNavigationBar buildBottomNavigationBar(int currentIndex, Function(int) onTap) {
+  return BottomNavigationBar(
+    type: BottomNavigationBarType.fixed,
+    currentIndex: currentIndex,
+    selectedItemColor: Colors.blue,
+    unselectedItemColor: Colors.grey,
+    onTap: onTap,
+    items: const [
+      BottomNavigationBarItem(
+        icon: Icon(Icons.home),
+        label: "หน้าแรก",
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(Icons.add_circle_outline),
+        label: "สร้างงาน",
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(Icons.chat),
+        label: "แชท",
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(Icons.notifications),
+        label: "แจ้งเตือน",
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(Icons.person),
+        label: "โปรไฟล์",
+      ),
+    ],
+  );
 }

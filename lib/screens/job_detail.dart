@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../component/bottom_nav.dart';
 import 'package:intl/intl.dart';
 import '../model/job_model.dart'; 
 import 'package:get/get.dart'; 
@@ -257,6 +258,19 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
           ),
         ),
       ),
+        bottomNavigationBar: buildBottomNavigationBar(
+      0, // highlight แท็บ Home
+      (index) {
+        switch (index) {
+          case 0:
+            Get.back();
+            break;
+          default:
+            Get.off(() => BottomNav(initialIndex: index));
+            break;
+        }
+      },
+    ),
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: Container(
