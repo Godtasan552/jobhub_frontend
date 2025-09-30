@@ -1,5 +1,6 @@
 // lib/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
+import 'package:form_validate/screens/job_detail.dart';
 import '../services/job_service.dart';
 import '../services/auth_service.dart';
 import '../model/job_model.dart';
@@ -211,8 +212,8 @@ class _DashboardScreenState extends State<DashboardScreen> {  // ✅ แก้�
         onTap: () {
           Navigator.pushNamed(
             context,
-            AppRoutes.getJobDetailRoute(),
-            arguments: job.id,
+            AppRoutes.JOB_DETAIL,
+            arguments: job,
           );
         },
         borderRadius: BorderRadius.circular(12),

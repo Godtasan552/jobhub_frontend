@@ -7,6 +7,7 @@ import '../screens/regis.dart';
 import '../screens/forget_pass.dart';
 import '../screens/dashboard_Screen.dart';
 import '../component/bottom_nav.dart';
+import '../screens/job_detail.dart';
 class AppPages {
   AppPages._();
 
@@ -57,6 +58,13 @@ class AppPages {
 
     ),
 
+   GetPage(
+      name: AppRoutes.JOB_DETAIL,
+      page: () => const job_detail(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+        
+    ),
     // อนาคตสามารถเพิ่ม routes อื่นๆ ได้ที่นี่
     /*
     GetPage(
