@@ -16,7 +16,7 @@ class _BottomNavState extends State<BottomNav> {
   final List<Widget> _pages = [
     const DashboardScreen(),
     const CreateJobScreen(),
-    Center(child: Text("chat"),), 
+    Center(child: Text("chat haha"),), 
     Center(child: Text("notifications"),),
     const ProfilePage(),
   ];
