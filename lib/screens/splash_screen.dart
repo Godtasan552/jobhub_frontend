@@ -1,7 +1,7 @@
 // lib/screens/splash_screen.dart
 import 'package:flutter/material.dart';
 import '../utils/navigation_helper.dart';
-import '../services/auth_service.dart'; //  ต้อง import
+import '../services/auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -69,11 +69,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _checkUserStatus() async {
     try {
-      // ✅ เรียก AuthService.getToken() จริงๆ
       final token = AuthService.getToken();
-      
-      // Debug: แสดง token ใน console
-      print('🔍 Token from storage: ${token ?? "NULL"}');
 
       if (token != null && token.isNotEmpty) {
         print('✅ Token found - Going to Dashboard');

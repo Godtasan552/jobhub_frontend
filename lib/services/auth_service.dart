@@ -49,11 +49,8 @@ class AuthService {
     );
 
     final data = jsonDecode(response.body);
-    
-    print('📦 Full API Response: $data');
 
     if (data['success'] == true) {
-      // ✅ แก้ไขตรงนี้ - token อยู่ใน data.tokens.accessToken
       final accessToken = data['data']['tokens']['accessToken'];
       final refreshToken = data['data']['tokens']['refreshToken'];
       final user = data['data']['user'];
@@ -63,14 +60,14 @@ class AuthService {
         await _storage.write('refreshToken', refreshToken);
         await _storage.write('user', user);
         
-        print('✅ Token saved: $accessToken');
-        print('👤 User saved: $user');
+        print('✅ Token saved successfully');
+        print('👤 User: ${user['name']} (${user['email']})');
         
-        // ตรวจสอบอ่านกลับมา
+        // ตรวจสอบว่าบันทึกสำเร็จ
         final savedToken = _storage.read('token');
-        print('🔍 Read token back: $savedToken');
+        print('📖 Token stored: ${savedToken != null ? "Yes" : "No"}');
       } else {
-        print('❌ No accessToken found in API response!');
+        print('❌ No accessToken in response');
       }
     }
 
@@ -80,7 +77,7 @@ class AuthService {
   /// ดึง token ที่เก็บไว้
   static String? getToken() {
     final token = _storage.read('token');
-    print('📖 getToken called, returning: ${token ?? "NULL"}');
+    print('📖 getToken called, returning: ${token != null ? "Token exists" : "NULL"}');
     return token;
   }
 
@@ -97,6 +94,6 @@ class AuthService {
   /// logout
   static Future<void> logout() async {
     await _storage.erase();
-    print('🗑️ Storage erased');
+    print('🗑️ Storage cleared');
   }
 }
