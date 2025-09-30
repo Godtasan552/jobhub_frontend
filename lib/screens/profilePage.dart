@@ -389,7 +389,7 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       }
     } catch (e) {
-      print('❌ Apply worker error: $e');
+      print(' Apply worker error: $e');
       Get.snackbar(
         'Error',
         'เกิดข้อผิดพลาด: $e',
@@ -897,6 +897,17 @@ class _WorkerApplicationDialogState extends State<_WorkerApplicationDialog> {
                     hintText: 'URL ของ Portfolio เช่น GitHub, Website',
                     prefixIcon: Icon(Icons.link),
                   ),
+                  validator: (value) {
+                    // ถ้าไม่กรอกก็ผ่าน
+                    if (value == null || value.trim().isEmpty) {
+                      return null;
+                    }
+                    // ถ้ากรอกต้องเป็น URL ที่ถูกต้อง
+                    if (!value.startsWith('http://') && !value.startsWith('https://')) {
+                      return 'กรุณากรอก URL ที่ขึ้นต้นด้วย http:// หรือ https://';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
 
@@ -932,15 +943,15 @@ class _WorkerApplicationDialogState extends State<_WorkerApplicationDialog> {
                   items: const [
                     DropdownMenuItem(
                       value: 'full-time',
-                      child: Text('Full-time'),
+                      child: Text('Full-time(เต็มเวลา)'),
                     ),
                     DropdownMenuItem(
                       value: 'part-time',
-                      child: Text('Part-time'),
+                      child: Text('Part-time(พาร์ทไทม์)'),
                     ),
                     DropdownMenuItem(
                       value: 'freelance',
-                      child: Text('Freelance'),
+                      child: Text('Flexible(ยือหยุ่น)'),
                     ),
                   ],
                   onChanged: (value) {
@@ -979,6 +990,9 @@ class _WorkerApplicationDialogState extends State<_WorkerApplicationDialog> {
                             'hourlyRate': int.parse(_hourlyRateController.text),
                             'availability': _availability,
                           };
+                          if(_portfolioController.text.trim().isNotEmpty){
+                            result['portfolio'] = _portfolioController.text.trim();
+                          }
                           Navigator.pop(context, result);
                         }
                       },
