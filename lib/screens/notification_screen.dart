@@ -1,6 +1,8 @@
+// lib/screens/notification_screen.dart
+
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/notification_provider.dart';
+import 'package:get/get.dart';
+import '../controllers/notification_controller.dart';
 import '../model/notification_model.dart';
 import 'package:intl/intl.dart';
 
@@ -9,83 +11,84 @@ class NotificationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final NotificationController controller = Get.find<NotificationController>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('การแจ้งเตือน'),
         actions: [
-          Consumer<NotificationProvider>(
-            builder: (context, provider, _) {
-              if (provider.unreadCount > 0) {
-                return TextButton(
-                  onPressed: () {
-                    final unreadIds = provider.notifications
-                        .where((n) => !n.read)
-                        .map((n) => n.id)
-                        .toList();
-                    if (unreadIds.isNotEmpty) {
-                      provider.markAsRead(unreadIds);
-                    }
-                  },
-                  child: const Text('อ่านทั้งหมด'),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
+          Obx(() {
+            if (controller.unreadCount.value > 0) {
+              return TextButton(
+                onPressed: () {
+                  final unreadIds = controller.notifications
+                      .where((n) => !n.read)
+                      .map((n) => n.id)
+                      .toList();
+                  if (unreadIds.isNotEmpty) {
+                    controller.markAsRead(unreadIds);
+                  }
+                },
+                child: const Text(
+                  'อ่านทั้งหมด',
+                  style: TextStyle(color: Colors.white),
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              context.read<NotificationProvider>().loadNotifications();
+              controller.loadNotifications();
             },
           ),
         ],
       ),
-      body: Consumer<NotificationProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          if (provider.notifications.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.notifications_off, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('ไม่มีการแจ้งเตือน', style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => provider.loadNotifications(),
-            child: ListView.separated(
-              itemCount: provider.notifications.length,
-              separatorBuilder: (context, index) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final notification = provider.notifications[index];
-                return NotificationTile(
-                  notification: notification,
-                  onTap: () {
-                    if (!notification.read) {
-                      provider.markAsRead([notification.id]);
-                    }
-                    // นำทางไปหน้าที่เกี่ยวข้อง (ถ้ามี actionUrl)
-                    if (notification.actionUrl != null) {
-                      // TODO: นำทางตาม actionUrl
-                    }
-                  },
-                  onDelete: () {
-                    provider.deleteNotification(notification.id);
-                  },
-                );
-              },
+        if (controller.notifications.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.notifications_off, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text('ไม่มีการแจ้งเตือน', style: TextStyle(color: Colors.grey)),
+              ],
             ),
           );
-        },
-      ),
+        }
+
+        return RefreshIndicator(
+          onRefresh: () => controller.loadNotifications(),
+          child: ListView.separated(
+            itemCount: controller.notifications.length,
+            separatorBuilder: (context, index) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final notification = controller.notifications[index];
+              return NotificationTile(
+                notification: notification,
+                onTap: () {
+                  if (!notification.read) {
+                    controller.markAsRead([notification.id]);
+                  }
+                  // นำทางไปหน้าที่เกี่ยวข้อง (ถ้ามี actionUrl)
+                  if (notification.actionUrl != null) {
+                    // TODO: นำทางตาม actionUrl
+                  }
+                },
+                onDelete: () {
+                  controller.deleteNotification(notification.id);
+                },
+              );
+            },
+          ),
+        );
+      }),
     );
   }
 }
@@ -151,8 +154,10 @@ class NotificationTile extends StatelessWidget {
       ),
       onDismissed: (direction) {
         onDelete();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ลบการแจ้งเตือนแล้ว')),
+        Get.snackbar(
+          'สำเร็จ',
+          'ลบการแจ้งเตือนแล้ว',
+          snackPosition: SnackPosition.BOTTOM,
         );
       },
       child: ListTile(
@@ -182,7 +187,7 @@ class NotificationTile extends StatelessWidget {
             ? Container(
                 width: 12,
                 height: 12,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.blue,
                   shape: BoxShape.circle,
                 ),

@@ -1,5 +1,7 @@
+// lib/services/socket_service.dart
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter/foundation.dart';
+import 'package:get/get.dart'; // ✅ เพิ่ม
 import '../model/notification_model.dart';
 
 class SocketService {
@@ -10,12 +12,13 @@ class SocketService {
   IO.Socket? _socket;
   final String _baseUrl = 'https://jobhubbackend-production-cc57.up.railway.app';
   
+  // ✅ ใช้ RxBool แทน
+  var isConnected = false.obs;
+  
   // Callbacks
   Function(NotificationModel)? onNotificationReceived;
   Function(int)? onUnreadCountChanged;
   Function(String)? onNotificationRead;
-
-  bool get isConnected => _socket?.connected ?? false;
 
   // เชื่อมต่อ Socket
   void connect(String accessToken) {
@@ -38,14 +41,17 @@ class SocketService {
       // Event Listeners
       _socket!.onConnect((_) {
         debugPrint('✅ Socket connected');
+        isConnected.value = true; // ✅ อัพเดท
       });
 
       _socket!.onDisconnect((_) {
         debugPrint('❌ Socket disconnected');
+        isConnected.value = false; // ✅ อัพเดท
       });
 
       _socket!.onConnectError((error) {
         debugPrint('❌ Socket connection error: $error');
+        isConnected.value = false; // ✅ อัพเดท
       });
 
       _socket!.onError((error) {
@@ -94,11 +100,12 @@ class SocketService {
       _socket!.disconnect();
       _socket!.dispose();
       _socket = null;
+      isConnected.value = false; // ✅ อัพเดท
       debugPrint('Socket disconnected and disposed');
     }
   }
 
-  // ส่ง event เพื่อทำเครื่องหมายว่าอ่านแล้ว (ถ้า backend support)
+  // ส่ง event เพื่อทำเครื่องหมายว่าอ่านแล้ว
   void markAsRead(String notificationId) {
     if (_socket != null && _socket!.connected) {
       _socket!.emit('mark_notification_read', {'notificationId': notificationId});

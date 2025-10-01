@@ -1,16 +1,17 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
     namespace = "com.example.form_validate"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // ✅ เพิ่ม desugaring
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -20,20 +21,19 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.form_validate"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // ✅ เปลี่ยนเป็น 21 เพื่อรองรับ notifications
+        minSdk = flutter.minSdkVersion  // ✅ ต้องเป็น 21 ขึ้นไป
+        targetSdk = 35  // ✅ ต้องเป็น 35 สำหรับ API ใหม่
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // ✅ เพิ่ม multiDex
+        multiDexEnabled = true
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -41,4 +41,14 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // ✅ เพิ่ม dependencies เหล่านี้
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    implementation("androidx.multidex:multidex:2.0.1")
+
+    // ✅ เพิ่ม dependencies เหล่านี้สำหรับ notifications
+    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 }

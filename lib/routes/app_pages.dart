@@ -11,7 +11,6 @@ import '../component/bottom_nav.dart';
 import '../screens/profilePage.dart';
 import '../screens/dashboard_Screen.dart'; // ✅ แก้ชื่อให้ตรง
 import '../screens/notification_screen.dart';
-import '../controllers/notification_controller.dart';
 import '../screens/debug_notification.dart';
 
 class AppPages {
@@ -65,17 +64,14 @@ class AppPages {
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),
-
-    // ✅ Notification Page พร้อม Controller Binding
     GetPage(
       name: AppRoutes.NOTIFICATION,
-      page: () => const NotificationView(),
-      binding: BindingsBuilder(() {
-        Get.lazyPut<NotificationController>(() => NotificationController());
-      }),
-      transition: Transition.fadeIn,
+      page: () => const NotificationScreen(),
+      transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),
+
+    
     // Profile Page
     GetPage(
       name: AppRoutes.DEBUGNOTI,

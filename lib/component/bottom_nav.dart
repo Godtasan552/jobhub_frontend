@@ -6,7 +6,7 @@ import '../screens/dashboard_screen.dart';
 import '../screens/create_job.dart';
 import '../screens/notification_screen.dart';
 import '../screens/profilePage.dart';
-import '../controllers/notification_controller.dart';
+import '../controllers/notification_controller.dart'; // ✅ เพิ่ม
 
 class BottomNav extends StatefulWidget {
   const BottomNav({super.key});
@@ -17,35 +17,21 @@ class BottomNav extends StatefulWidget {
 
 class _BottomNavState extends State<BottomNav> {
   int _currentIndex = 0;
+  
+  // ✅ เรียกใช้ NotificationController
+  final NotificationController notificationController = Get.find<NotificationController>();
 
-  @override
-  void initState() {
-    super.initState();
-    
-    // ✅ Debug และสร้าง NotificationController
-    print('🔍 BottomNav initialized - checking NotificationController...');
-    
-    if (!Get.isRegistered<NotificationController>()) {
-      Get.put(NotificationController());
-      print('✅ NotificationController created in BottomNav');
-    } else {
-      print('ℹ️ NotificationController already exists');
-    }
-  }
-
-  // ✅ 5 หน้าเหมือนโค้ดแรก
+  // ✅ 5 หน้าเหมือนเดิม
   final List<Widget> _pages = [
     const DashboardScreen(),
     const CreateJobScreen(),
     const Center(child: Text("Chat ยังไม่ทำ", style: TextStyle(fontSize: 18))),
-    const NotificationView(),
+    const NotificationScreen(),
     const ProfilePage(),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final notificationController = Get.find<NotificationController>();
-
     return Scaffold(
       body: _pages[_currentIndex],
       bottomNavigationBar: Obx(() {

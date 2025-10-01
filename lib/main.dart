@@ -1,24 +1,27 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart'; // ✅ เพิ่มบรรทัดนี้
+import 'package:get_storage/get_storage.dart';
 import 'routes/app_pages.dart';
 import 'routes/app_routes.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
+import 'controllers/notification_controller.dart'; // ✅ เพิ่ม
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // ✅ ต้องมีบรรทัดนี้
+  // ✅ เริ่มต้น GetStorage
   await GetStorage.init();
   print('✅ GetStorage initialized');
   
   await dotenv.load(fileName: ".env");
+  
+  // ✅ เริ่มต้น NotificationController
+  Get.put(NotificationController());
+  
   runApp(const MainApp());
 }
 
-// ส่วนที่เหลือไม่ต้องแก้อะไร
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
@@ -26,8 +29,6 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      
-      
       title: 'Form Validate App',
       initialRoute: AppRoutes.SPLASH,
       getPages: AppPages.routes,
