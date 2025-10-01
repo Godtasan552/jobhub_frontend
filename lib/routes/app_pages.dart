@@ -10,7 +10,7 @@ import '../screens/forget_pass.dart';
 import '../component/bottom_nav.dart';
 import '../screens/profilePage.dart';
 import '../screens/dashboard_Screen.dart'; // ✅ แก้ชื่อให้ตรง
-import '../screens/notification.dart';
+import '../screens/notification_screen.dart';
 import '../controllers/notification_controller.dart';
 import '../screens/debug_notification.dart';
 

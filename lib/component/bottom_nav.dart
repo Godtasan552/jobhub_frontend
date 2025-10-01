@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/create_job.dart';
-import '../screens/notification.dart';
+import '../screens/notification_screen.dart';
 import '../screens/profilePage.dart';
 import '../controllers/notification_controller.dart';
 
