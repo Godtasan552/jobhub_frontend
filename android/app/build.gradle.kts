@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.form_validate"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -23,8 +23,8 @@ android {
     defaultConfig {
         applicationId = "com.example.form_validate"
         // ✅ เปลี่ยนเป็น 21 เพื่อรองรับ notifications
-        minSdk = flutter.minSdkVersion  // ✅ ต้องเป็น 21 ขึ้นไป
-        targetSdk = 35  // ✅ ต้องเป็น 35 สำหรับ API ใหม่
+        minSdk = 21  // ✅ ต้องเป็น 21 ขึ้นไป
+        targetSdk = 36  
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         
