@@ -319,7 +319,88 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-  // เพิ่มฟังก์ชันนี้ใน class _ProfilePageState
+
+  //function แสดง ข้อมูลสำหรับ คนที่ appove เป็น worker แล้ว
+  Widget buildAboutCard(Map<String, dynamic> userData) {
+    final aboutString = userData['about'] ?? '';
+
+    final jsonString = aboutString.replaceFirst("Worker Info: ", "").trim();
+
+    Map<String, dynamic> aboutData = {};
+    try {
+      aboutData = jsonDecode(jsonString);
+    } catch (e) {
+      debugPrint("Error parsing about JSON: $e");
+    }
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.info, color: Colors.deepPurple),
+            title: const Text(
+              "ข้อมูลเพิ่มเติม",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const Divider(height: 1),
+
+          if (_userData?['skills'] != null)
+            ListTile(
+              leading: const Icon(Icons.build, color: Colors.blue),
+              title: Text(
+                "ทักษะ: ${(_userData?['skills'] as List).join(', ')}",
+              ),
+            ),
+
+          if (_userData?['categories'] != null)
+            ListTile(
+              leading: const Icon(Icons.category, color: Colors.orange),
+              title: Text(
+                "หมวดหมู่: ${(_userData?['categories'] as List).join(', ')}",
+              ),
+            ),
+
+          if (aboutData['experience'] != null)
+            ListTile(
+              leading: const Icon(Icons.work_history, color: Colors.green),
+              title: Text("ประสบการณ์: ${aboutData['experience']}"),
+            ),
+
+          if (aboutData['portfolio'] != null)
+            ListTile(
+              leading: const Icon(Icons.link, color: Colors.blueAccent),
+              title: InkWell(
+                onTap: () {
+                  // ใช้ url_launcher เปิดลิงก์
+                },
+                child: Text(
+                  "Portfolio: ${aboutData['portfolio']}",
+                  style: const TextStyle(
+                    color: Colors.blue,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ),
+
+          if (aboutData['hourlyRate'] != null)
+            ListTile(
+              leading: const Icon(Icons.attach_money, color: Colors.teal),
+              title: Text("ค่าจ้างต่อชั่วโมง: ${aboutData['hourlyRate']} บาท"),
+            ),
+
+          if (aboutData['availability'] != null)
+            ListTile(
+              leading: const Icon(Icons.schedule, color: Colors.purple),
+              title: Text("ความพร้อม: ${aboutData['availability']}"),
+            ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _applyWorker() async {
     // เช็คว่าเป็น worker อยู่แล้วหรือยัง
@@ -645,14 +726,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   if (_userData?['location'] != null)
                     const SizedBox(height: 16),
 
-                  // About
-                  if (_userData?['about'] != null)
-                    _buildInfoCard(
-                      icon: Icons.info,
-                      title: 'เกี่ยวกับ',
-                      value: _userData!['about'],
-                      color: Colors.purple,
-                    ),
+                  if (_userData?['isWorkerApproved'] == true)
+                    buildAboutCard(_userData!),
+
                   if (_userData?['about'] != null) const SizedBox(height: 16),
 
                   // Worker Status
@@ -893,18 +969,19 @@ class _WorkerApplicationDialogState extends State<_WorkerApplicationDialog> {
                 TextFormField(
                   controller: _portfolioController,
                   decoration: const InputDecoration(
-                    labelText: 'Portfolio (ไม่บังคับ)',
+                    labelText: 'Portfolio *',
                     hintText: 'URL ของ Portfolio เช่น GitHub, Website',
                     prefixIcon: Icon(Icons.link),
                   ),
                   validator: (value) {
                     // ถ้าไม่กรอกก็ผ่าน
                     if (value == null || value.trim().isEmpty) {
-                      return null;
+                      return 'กรุณากรอก Portfolio';
                     }
                     // ถ้ากรอกต้องเป็น URL ที่ถูกต้อง
-                    if (!value.startsWith('http://') && !value.startsWith('https://')) {
-                      return 'กรุณากรอก URL ที่ขึ้นต้นด้วย http:// หรือ https://';
+                    if (!value.startsWith('http://') &&
+                        !value.startsWith('https://')) {
+                      return 'กรุณากรอก URL ที่ขึ้นต้นด้วย https:// หรือ http://';
                     }
                     return null;
                   },
@@ -950,8 +1027,8 @@ class _WorkerApplicationDialogState extends State<_WorkerApplicationDialog> {
                       child: Text('Part-time(พาร์ทไทม์)'),
                     ),
                     DropdownMenuItem(
-                      value: 'freelance',
-                      child: Text('Flexible(ยือหยุ่น)'),
+                      value: 'fiexible',
+                      child: Text('Flexible(ยืดหยุ่น)'),
                     ),
                   ],
                   onChanged: (value) {
@@ -990,8 +1067,9 @@ class _WorkerApplicationDialogState extends State<_WorkerApplicationDialog> {
                             'hourlyRate': int.parse(_hourlyRateController.text),
                             'availability': _availability,
                           };
-                          if(_portfolioController.text.trim().isNotEmpty){
-                            result['portfolio'] = _portfolioController.text.trim();
+                          if (_portfolioController.text.trim().isNotEmpty) {
+                            result['portfolio'] = _portfolioController.text
+                                .trim();
                           }
                           Navigator.pop(context, result);
                         }
