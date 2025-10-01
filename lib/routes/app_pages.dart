@@ -11,7 +11,7 @@ import '../component/bottom_nav.dart';
 import '../screens/profilePage.dart';
 import '../screens/dashboard_Screen.dart'; // ✅ แก้ชื่อให้ตรง
 import '../screens/notification_screen.dart';
-import '../screens/debug_notification.dart';
+
 
 class AppPages {
   AppPages._();
@@ -72,12 +72,6 @@ class AppPages {
     ),
 
     
-    // Profile Page
-    GetPage(
-      name: AppRoutes.DEBUGNOTI,
-      page: () => const DebugNotificationScreen(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-    ),
+
   ];
 }

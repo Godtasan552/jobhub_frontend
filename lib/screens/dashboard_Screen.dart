@@ -7,7 +7,6 @@ import '../model/job_model.dart';
 import '../utils/navigation_helper.dart';
 import '../routes/app_routes.dart';
 import 'package:intl/intl.dart';
-import '../screens/debug_notification.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -35,7 +34,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     try {
       final result = await JobService.getAllJobs();
-      
+
       print('📦 Job Service Result: $result');
 
       if (result['success'] == true) {
@@ -149,65 +148,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.error_outline,
-                            size: 64, color: Colors.red[300]),
-                        const SizedBox(height: 16),
-                        Text(
-                          _errorMessage!,
-                          style: const TextStyle(fontSize: 16),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: _loadJobs,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('ลองใหม่'),
-                        ),
-                      ],
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                    const SizedBox(height: 16),
+                    Text(
+                      _errorMessage!,
+                      style: const TextStyle(fontSize: 16),
+                      textAlign: TextAlign.center,
                     ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _loadJobs,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('ลองใหม่'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : _jobs.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.work_off, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'ไม่มีงานในขณะนี้',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
                   ),
-                )
-              : _jobs.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.work_off,
-                              size: 64, color: Colors.grey[400]),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'ไม่มีงานในขณะนี้',
-                            style: TextStyle(fontSize: 18, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadJobs,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _jobs.length,
-                        itemBuilder: (context, index) {
-                          final job = _jobs[index];
-                          return _buildJobCard(job);
-                        },
-                      ),
-                    ),
-      // ✅ floatingActionButton ต้องอยู่นอก body
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Get.to(() => const DebugNotificationScreen());
-        },
-        icon: const Icon(Icons.bug_report),
-        label: const Text('Debug API'),
-        backgroundColor: Colors.orange,
-      ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadJobs,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _jobs.length,
+                itemBuilder: (context, index) {
+                  final job = _jobs[index];
+                  return _buildJobCard(job);
+                },
+              ),
+            ),
     );
   }
 
