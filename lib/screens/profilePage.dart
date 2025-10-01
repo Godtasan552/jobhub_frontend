@@ -969,14 +969,14 @@ class _WorkerApplicationDialogState extends State<_WorkerApplicationDialog> {
                 TextFormField(
                   controller: _portfolioController,
                   decoration: const InputDecoration(
-                    labelText: 'Portfolio (ไม่บังคับ)',
+                    labelText: 'Portfolio *',
                     hintText: 'URL ของ Portfolio เช่น GitHub, Website',
                     prefixIcon: Icon(Icons.link),
                   ),
                   validator: (value) {
                     // ถ้าไม่กรอกก็ผ่าน
                     if (value == null || value.trim().isEmpty) {
-                      return null;
+                      return 'กรุณากรอก Portfolio';
                     }
                     // ถ้ากรอกต้องเป็น URL ที่ถูกต้อง
                     if (!value.startsWith('http://') &&
@@ -1027,8 +1027,8 @@ class _WorkerApplicationDialogState extends State<_WorkerApplicationDialog> {
                       child: Text('Part-time(พาร์ทไทม์)'),
                     ),
                     DropdownMenuItem(
-                      value: 'freelance',
-                      child: Text('Flexible(ยือหยุ่น)'),
+                      value: 'fiexible',
+                      child: Text('Flexible(ยืดหยุ่น)'),
                     ),
                   ],
                   onChanged: (value) {
