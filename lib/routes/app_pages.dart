@@ -1,3 +1,5 @@
+// lib/routes/app_pages.dart
+
 import 'package:get/get.dart';
 import 'app_routes.dart';
 
@@ -7,8 +9,10 @@ import '../screens/regis.dart';
 import '../screens/forget_pass.dart';
 import '../component/bottom_nav.dart';
 import '../screens/profilePage.dart';
-import '../screens/dashboard_Screen.dart';
+import '../screens/dashboard_Screen.dart'; // ✅ แก้ชื่อให้ตรง
 import '../screens/notification.dart';
+import '../controllers/notification_controller.dart';
+
 class AppPages {
   AppPages._();
 
@@ -44,47 +48,32 @@ class AppPages {
       transition: Transition.cupertino,
       transitionDuration: const Duration(milliseconds: 300),
     ),
+
+    // ✅ Dashboard Route - ใช้ BottomNav เป็นหน้าหลัก
     GetPage(
       name: AppRoutes.DASHBOARD,
       page: () => const BottomNav(),
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
     ),
+
+    // Profile Page
     GetPage(
       name: AppRoutes.PROFILE,
       page: () => const ProfilePage(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),
-    GetPage(
-      name: AppRoutes.DASHBOARD,
-      page: () => const DashboardScreen(),  // ✅ เปลี่ยนชื่อ
-      transition: Transition.fadeIn,
-      transitionDuration: const Duration(milliseconds: 300),
 
-    ),
+    // ✅ Notification Page พร้อม Controller Binding
     GetPage(
       name: AppRoutes.NOTIFICATION,
-      page: () => const NotificationScreen(),  // ✅ เปลี่ยนชื่อ
+      page: () => const NotificationView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<NotificationController>(() => NotificationController());
+      }),
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
     ),
-
-    // อนาคตสามารถเพิ่ม routes อื่นๆ ได้ที่นี่
-    /*
-    GetPage(
-      name: AppRoutes.HOME,
-      page: () => const HomeScreen(),
-      transition: Transition.zoom,
-      transitionDuration: const Duration(milliseconds: 300),
-    ),
-    
-    GetPage(
-      name: AppRoutes.PROFILE,
-      page: () => const ProfileScreen(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-    ),
-    */
   ];
 }
