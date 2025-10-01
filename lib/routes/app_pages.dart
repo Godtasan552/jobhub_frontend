@@ -7,7 +7,7 @@ import '../screens/regis.dart';
 import '../screens/forget_pass.dart';
 import '../component/bottom_nav.dart';
 import '../screens/profilePage.dart';
-
+import '../screens/dashboard_Screen.dart';
 class AppPages {
   AppPages._();
 

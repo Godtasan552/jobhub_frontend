@@ -319,7 +319,69 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-  // เพิ่มฟังก์ชันนี้ใน class _ProfilePageState
+
+  //function แสดง ข้อมูลสำหรับ คนที่ appove เป็น worker แล้ว
+  Widget buildAboutCard(Map<String, dynamic> userData) {
+    final aboutString = userData['about'] ?? '';
+
+    final jsonString = aboutString.replaceFirst("Worker Info: ", "").trim();
+
+    Map<String, dynamic> aboutData = {};
+    try {
+      aboutData = jsonDecode(jsonString);
+    } catch (e) {
+      debugPrint("Error parsing about JSON: $e");
+    }
+
+    return Card(
+      elevation: 4,
+      margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "ข้อมูลเพิ่มเติม",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            if (_userData?['skills'] != null)
+              Text("ทักษะ: ${(_userData?['skills'] as List).join(', ')}"),
+
+            if (_userData?['categories'] != null)
+              Text(
+                "หมวดหมู่: ${(_userData?['categories'] as List).join(', ')}",
+              ),
+
+            if (aboutData['experience'] != null)
+              Text("ประสบการณ์: ${aboutData['experience']}"),
+
+            if (aboutData['portfolio'] != null)
+              InkWell(
+                onTap: () {
+                  // เปิดลิงก์ใน browser ได้ด้วย url_launcher
+                },
+                child: Text(
+                  "Portfolio: ${aboutData['portfolio']}",
+                  style: const TextStyle(
+                    color: Colors.blue,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+
+            if (aboutData['hourlyRate'] != null)
+              Text("ค่าจ้างต่อชั่วโมง: ${aboutData['hourlyRate']} บาท"),
+
+            if (aboutData['availability'] != null)
+              Text("ความพร้อม: ${aboutData['availability']}"),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> _applyWorker() async {
     // เช็คว่าเป็น worker อยู่แล้วหรือยัง
@@ -645,14 +707,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   if (_userData?['location'] != null)
                     const SizedBox(height: 16),
 
-                  // About
-                  if (_userData?['about'] != null)
-                    _buildInfoCard(
-                      icon: Icons.info,
-                      title: 'เกี่ยวกับ',
-                      value: _userData!['about'],
-                      color: Colors.purple,
-                    ),
+                  if (_userData?['isWorkerApproved'] == true)
+                    buildAboutCard(_userData!),
+
                   if (_userData?['about'] != null) const SizedBox(height: 16),
 
                   // Worker Status
@@ -903,7 +960,8 @@ class _WorkerApplicationDialogState extends State<_WorkerApplicationDialog> {
                       return null;
                     }
                     // ถ้ากรอกต้องเป็น URL ที่ถูกต้อง
-                    if (!value.startsWith('http://') && !value.startsWith('https://')) {
+                    if (!value.startsWith('http://') &&
+                        !value.startsWith('https://')) {
                       return 'กรุณากรอก URL ที่ขึ้นต้นด้วย http:// หรือ https://';
                     }
                     return null;
@@ -990,8 +1048,9 @@ class _WorkerApplicationDialogState extends State<_WorkerApplicationDialog> {
                             'hourlyRate': int.parse(_hourlyRateController.text),
                             'availability': _availability,
                           };
-                          if(_portfolioController.text.trim().isNotEmpty){
-                            result['portfolio'] = _portfolioController.text.trim();
+                          if (_portfolioController.text.trim().isNotEmpty) {
+                            result['portfolio'] = _portfolioController.text
+                                .trim();
                           }
                           Navigator.pop(context, result);
                         }
