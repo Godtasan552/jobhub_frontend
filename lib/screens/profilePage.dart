@@ -332,36 +332,49 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (e) {
       debugPrint("Error parsing about JSON: $e");
     }
-
     return Card(
-      elevation: 4,
-      margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.info, color: Colors.deepPurple),
+            title: const Text(
               "ข้อมูลเพิ่มเติม",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 12),
-            if (_userData?['skills'] != null)
-              Text("ทักษะ: ${(_userData?['skills'] as List).join(', ')}"),
+          ),
+          const Divider(height: 1),
 
-            if (_userData?['categories'] != null)
-              Text(
+          if (_userData?['skills'] != null)
+            ListTile(
+              leading: const Icon(Icons.build, color: Colors.blue),
+              title: Text(
+                "ทักษะ: ${(_userData?['skills'] as List).join(', ')}",
+              ),
+            ),
+
+          if (_userData?['categories'] != null)
+            ListTile(
+              leading: const Icon(Icons.category, color: Colors.orange),
+              title: Text(
                 "หมวดหมู่: ${(_userData?['categories'] as List).join(', ')}",
               ),
+            ),
 
-            if (aboutData['experience'] != null)
-              Text("ประสบการณ์: ${aboutData['experience']}"),
+          if (aboutData['experience'] != null)
+            ListTile(
+              leading: const Icon(Icons.work_history, color: Colors.green),
+              title: Text("ประสบการณ์: ${aboutData['experience']}"),
+            ),
 
-            if (aboutData['portfolio'] != null)
-              InkWell(
+          if (aboutData['portfolio'] != null)
+            ListTile(
+              leading: const Icon(Icons.link, color: Colors.blueAccent),
+              title: InkWell(
                 onTap: () {
-                  // เปิดลิงก์ใน browser ได้ด้วย url_launcher
+                  // ใช้ url_launcher เปิดลิงก์
                 },
                 child: Text(
                   "Portfolio: ${aboutData['portfolio']}",
@@ -371,14 +384,20 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
               ),
+            ),
 
-            if (aboutData['hourlyRate'] != null)
-              Text("ค่าจ้างต่อชั่วโมง: ${aboutData['hourlyRate']} บาท"),
+          if (aboutData['hourlyRate'] != null)
+            ListTile(
+              leading: const Icon(Icons.attach_money, color: Colors.teal),
+              title: Text("ค่าจ้างต่อชั่วโมง: ${aboutData['hourlyRate']} บาท"),
+            ),
 
-            if (aboutData['availability'] != null)
-              Text("ความพร้อม: ${aboutData['availability']}"),
-          ],
-        ),
+          if (aboutData['availability'] != null)
+            ListTile(
+              leading: const Icon(Icons.schedule, color: Colors.purple),
+              title: Text("ความพร้อม: ${aboutData['availability']}"),
+            ),
+        ],
       ),
     );
   }
@@ -962,7 +981,7 @@ class _WorkerApplicationDialogState extends State<_WorkerApplicationDialog> {
                     // ถ้ากรอกต้องเป็น URL ที่ถูกต้อง
                     if (!value.startsWith('http://') &&
                         !value.startsWith('https://')) {
-                      return 'กรุณากรอก URL ที่ขึ้นต้นด้วย http:// หรือ https://';
+                      return 'กรุณากรอก URL ที่ขึ้นต้นด้วย https:// หรือ http://';
                     }
                     return null;
                   },
