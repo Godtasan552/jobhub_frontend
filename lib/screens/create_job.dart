@@ -94,7 +94,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       return;
     }
 
-
     setState(() {
       _isLoading = true;
     });
@@ -148,36 +147,39 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         body: json.encode(requestBody),
       );
 
-      print('📡 Response status: ${response.statusCode}');
-      print('📡 Response body: ${response.body}');
+      //print('📡 Response status: ${response.statusCode}');
+      //print('📡 Response body: ${response.body}');
 
       final data = json.decode(response.body);
-
+      //ตรงนี้เพิ่ม print เพื่อตรวจสอบค่า data
+      //print('Parsed data: $data');
+      //print('success value: ${data['success']}');
+      //print('success type: ${data['success']}.runtimeType');
       if (data['success'] == true) {
-        Get.snackbar(
+        print('condition success == true passed');
+       // รีเซ็ตฟอร์ม
+        if (mounted) {
+          _formKey.currentState?.reset();
+          _titleController.clear();
+          _descriptionController.clear();
+          _budgetController.clear();
+          _durationController.clear();
+          _requirementsController.clear();
+          setState(() {
+            _selectedDeadline = null;
+            _selectedType = 'freelance';
+            _selectedCategory = 'technology';
+          });
+         Get.back();
+         Get.snackbar(
           'สำเร็จ',
           data['message'] ?? 'สร้างงานเรียบร้อยแล้ว',
           backgroundColor: Colors.green[100],
           colorText: Colors.green[900],
           duration: const Duration(seconds: 2),
           snackPosition: SnackPosition.TOP,
-        );
-
-        // รีเซ็ตฟอร์ม
-        if(mounted){
-               _formKey.currentState?.reset();
-        _titleController.clear();
-        _descriptionController.clear();
-        _budgetController.clear();
-        _durationController.clear();
-        _requirementsController.clear();
-        setState(() {
-          _selectedDeadline = null;
-          _selectedType = 'freelance';
-          _selectedCategory = 'technology';
-        });
-         Get.back();
-        }
+        );}
+         
 
         // กลับไปหน้า Dashboard หรือ Job List
       } else {
@@ -208,7 +210,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         'เกิดข้อผิดพลาด: $e',
         backgroundColor: Colors.red[100],
         colorText: const Color.fromARGB(255, 241, 171, 19),
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         duration: const Duration(seconds: 4),
       );
     } finally {
