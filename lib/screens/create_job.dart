@@ -402,14 +402,10 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         decoration: InputDecoration(
                           labelText: 'วันที่สิ้นสุดรับสมัคร',
                           prefixIcon: const Icon(Icons.calendar_today),
-                          // เพิ่ม error text ถ้า validation ไม่ผ่าน
-                          errorText: _selectedDeadline == null
-                              ? 'กรุณาเลือกวันที่สิ้นสุด'
-                              : null,
                         ),
                         child: Text(
                           _selectedDeadline == null
-                              ? 'เลือกวันที่'
+                              ? 'เลือกวันที่ บังคับ**'
                               : DateFormat(
                                   'dd/MM/yyyy',
                                 ).format(_selectedDeadline!),
