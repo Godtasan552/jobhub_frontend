@@ -1,20 +1,22 @@
 // lib/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
+import 'package:get/get.dart'; // ✅ เพิ่มบรรทัดนี้
 import '../services/job_service.dart';
 import '../services/auth_service.dart';
 import '../model/job_model.dart';
 import '../utils/navigation_helper.dart';
 import '../routes/app_routes.dart';
 import 'package:intl/intl.dart';
+import '../screens/debug_notification.dart';
 
-class DashboardScreen extends StatefulWidget {  // ✅ แก้ชื่อ
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {  // ✅ แก้ชื่อ
+class _DashboardScreenState extends State<DashboardScreen> {
   List<JobModel> _jobs = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -34,7 +36,7 @@ class _DashboardScreenState extends State<DashboardScreen> {  // ✅ แก้�
     try {
       final result = await JobService.getAllJobs();
       
-      print('📦 Job Service Result: $result'); // Debug
+      print('📦 Job Service Result: $result');
 
       if (result['success'] == true) {
         setState(() {
@@ -58,7 +60,7 @@ class _DashboardScreenState extends State<DashboardScreen> {  // ✅ แก้�
     }
   }
 
-  void _logout() async {  // ✅ เพิ่ม async
+  void _logout() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -79,8 +81,8 @@ class _DashboardScreenState extends State<DashboardScreen> {  // ✅ แก้�
     );
 
     if (confirm == true) {
-      await AuthService.logout();  // ✅ await
-      NavigationHelper.offAllNamed('/login');  // ✅ ใช้ NavigationHelper
+      await AuthService.logout();
+      NavigationHelper.offAllNamed('/login');
     }
   }
 
@@ -138,7 +140,7 @@ class _DashboardScreenState extends State<DashboardScreen> {  // ✅ แก้�
     return Scaffold(
       appBar: AppBar(
         title: const Text('งานทั้งหมด'),
-        automaticallyImplyLeading: false,  // ✅ ซ่อนปุ่ม back
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: _loadJobs),
           IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
@@ -197,6 +199,15 @@ class _DashboardScreenState extends State<DashboardScreen> {  // ✅ แก้�
                         },
                       ),
                     ),
+      // ✅ floatingActionButton ต้องอยู่นอก body
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Get.to(() => const DebugNotificationScreen());
+        },
+        icon: const Icon(Icons.bug_report),
+        label: const Text('Debug API'),
+        backgroundColor: Colors.orange,
+      ),
     );
   }
 

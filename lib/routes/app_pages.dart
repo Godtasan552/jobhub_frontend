@@ -12,6 +12,7 @@ import '../screens/profilePage.dart';
 import '../screens/dashboard_Screen.dart'; // ✅ แก้ชื่อให้ตรง
 import '../screens/notification.dart';
 import '../controllers/notification_controller.dart';
+import '../screens/debug_notification.dart';
 
 class AppPages {
   AppPages._();
@@ -73,6 +74,13 @@ class AppPages {
         Get.lazyPut<NotificationController>(() => NotificationController());
       }),
       transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    // Profile Page
+    GetPage(
+      name: AppRoutes.DEBUGNOTI,
+      page: () => const DebugNotificationScreen(),
+      transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),
   ];
