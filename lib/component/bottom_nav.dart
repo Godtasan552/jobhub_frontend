@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:form_validate/screens/create_job.dart';
 import 'package:form_validate/screens/dashboard_Screen.dart';
 import 'package:get/get.dart';
+import 'package:form_validate/screens/profilePage.dart';
 
 class BottomNav extends StatefulWidget {
   final int initialIndex; // เพิ่มพารามิเตอร์นี้

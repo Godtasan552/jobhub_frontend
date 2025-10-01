@@ -5,9 +5,10 @@ import '../screens/splash_screen.dart';
 import '../screens/login.dart';
 import '../screens/regis.dart';
 import '../screens/forget_pass.dart';
-import '../screens/dashboard_Screen.dart';
 import '../component/bottom_nav.dart';
 import '../screens/job_detail.dart';
+import '../screens/profilePage.dart';
+import '../screens/dashboard_Screen.dart';
 class AppPages {
   AppPages._();
 
@@ -48,7 +49,12 @@ class AppPages {
       page: () => const BottomNav(),
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
-
+    ),
+    GetPage(
+      name: AppRoutes.PROFILE,
+      page: () => const ProfilePage(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
       name: AppRoutes.DASHBOARD,
