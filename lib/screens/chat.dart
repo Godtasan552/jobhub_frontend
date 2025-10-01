@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-// 🔹 ตั้งค่า API และ Token
+// 🔹 ตั้งค่า API และ Token (ใส่ token จริงของคุณ)
 const String baseUrl = "http://your-api.com/api/v1/chat";
-const String token = "Authorization: Bearer <accessToken>"; // <-- ต้องเปลี่ยนเป็น token จริง
+const String token = "<YOUR_REAL_TOKEN>";
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -27,39 +27,55 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // 🔹 ดึงรายชื่อแชททั้งหมด
   Future<void> fetchConversations() async {
-    final url = Uri.parse("$baseUrl/conversations");
-    final response = await http.get(
-      url,
-      headers: {"Authorization": "Bearer $token"},
-    );
+    setState(() {
+      isLoading = true;
+    });
+    try {
+      final url = Uri.parse("$baseUrl/conversations");
+      final response = await http.get(
+        url,
+        headers: {"Authorization": "Bearer $token"},
+      );
 
-    if (response.statusCode == 200) {
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          conversations = data["data"] ?? []; // ตรวจสอบ response ของคุณ
+          isLoading = false;
+        });
+      } else {
+        debugPrint("❌ fetchConversations Error: ${response.body}");
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("❌ fetchConversations Exception: $e");
       setState(() {
-        conversations = json.decode(response.body);
         isLoading = false;
       });
-    } else {
-      setState(() {
-        isLoading = false;
-      });
-      debugPrint("❌ fetchConversations Error: ${response.body}");
     }
   }
 
   // 🔹 ดึงจำนวนข้อความที่ยังไม่อ่าน
   Future<void> fetchUnreadCount() async {
-    final url = Uri.parse("$baseUrl/unread-count");
-    final response = await http.get(
-      url,
-      headers: {"Authorization": "Bearer $token"},
-    );
+    try {
+      final url = Uri.parse("$baseUrl/unread-count");
+      final response = await http.get(
+        url,
+        headers: {"Authorization": "Bearer $token"},
+      );
 
-    if (response.statusCode == 200) {
-      setState(() {
-        unreadCount = json.decode(response.body)["unreadCount"] ?? 0;
-      });
-    } else {
-      debugPrint("❌ fetchUnreadCount Error: ${response.body}");
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          unreadCount = data["unreadCount"] ?? 0;
+        });
+      } else {
+        debugPrint("❌ fetchUnreadCount Error: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("❌ fetchUnreadCount Exception: $e");
     }
   }
 
@@ -67,7 +83,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Chats (${unreadCount} unread)"),
+        title: Text("Chats ($unreadCount unread)"),
         centerTitle: true,
       ),
       body: isLoading
@@ -149,26 +165,36 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   // 🔹 ดึงข้อความในแชท
   Future<void> fetchMessages() async {
-    final url = Uri.parse("$baseUrl/conversations/${widget.otherUserId}");
-    final response = await http.get(
-      url,
-      headers: {"Authorization": "Bearer $token"},
-    );
+    setState(() {
+      isLoading = true;
+    });
+    try {
+      final url = Uri.parse("$baseUrl/conversations/${widget.otherUserId}");
+      final response = await http.get(
+        url,
+        headers: {"Authorization": "Bearer $token"},
+      );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          messages = data["data"] ?? []; // ปรับให้ตรง response
+          isLoading = false;
+        });
+
+        // ทำเครื่องหมายว่าอ่านข้อความแล้ว
+        markMessagesAsRead(data["data"] ?? []);
+      } else {
+        debugPrint("❌ fetchMessages Error: ${response.body}");
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("❌ fetchMessages Exception: $e");
       setState(() {
-        messages = data;
         isLoading = false;
       });
-
-      // ทำเครื่องหมายว่าอ่านข้อความแล้ว
-      markMessagesAsRead(data);
-    } else {
-      setState(() {
-        isLoading = false;
-      });
-      debugPrint("❌ fetchMessages Error: ${response.body}");
     }
   }
 
@@ -176,25 +202,30 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   Future<void> sendMessage() async {
     if (messageController.text.isEmpty) return;
 
-    final url = Uri.parse("$baseUrl/send");
-    final response = await http.post(
-      url,
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json"
-      },
-      body: json.encode({
-        "toUserId": widget.otherUserId,
-        "message": messageController.text,
-        "messageType": "text"
-      }),
-    );
+    try {
+      final url = Uri.parse("$baseUrl/send");
+      final response = await http.post(
+        url,
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json"
+        },
+        body: json.encode({
+          "toUserId": widget.otherUserId,
+          "jobId": null, // หรือใส่ jobId ถ้ามี
+          "message": messageController.text,
+          "messageType": "text"
+        }),
+      );
 
-    if (response.statusCode == 200) {
-      messageController.clear();
-      fetchMessages(); // โหลดใหม่หลังส่ง
-    } else {
-      debugPrint("❌ SendMessage Error: ${response.body}");
+      if (response.statusCode == 200) {
+        messageController.clear();
+        fetchMessages(); // โหลดใหม่หลังส่ง
+      } else {
+        debugPrint("❌ sendMessage Error: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("❌ sendMessage Exception: $e");
     }
   }
 
@@ -207,18 +238,22 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
     if (unreadIds.isEmpty) return;
 
-    final url = Uri.parse("$baseUrl/mark-read");
-    final response = await http.post(
-      url,
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json"
-      },
-      body: json.encode({"messageIds": unreadIds}),
-    );
+    try {
+      final url = Uri.parse("$baseUrl/mark-read");
+      final response = await http.post(
+        url,
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json"
+        },
+        body: json.encode({"messageIds": unreadIds}),
+      );
 
-    if (response.statusCode != 200) {
-      debugPrint("❌ markMessagesAsRead Error: ${response.body}");
+      if (response.statusCode != 200) {
+        debugPrint("❌ markMessagesAsRead Error: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("❌ markMessagesAsRead Exception: $e");
     }
   }
 
@@ -233,33 +268,36 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    reverse: true,
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = messages[index];
-                      final isMe = msg["isMe"] ?? false;
-                      return Align(
-                        alignment:
-                            isMe ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(
-                              vertical: 4, horizontal: 8),
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: isMe ? Colors.blue : Colors.grey[300],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            msg["message"] ?? "",
-                            style: TextStyle(
-                              color: isMe ? Colors.white : Colors.black,
+                : messages.isEmpty
+                    ? const Center(child: Text("No messages"))
+                    : ListView.builder(
+                        reverse: true,
+                        itemCount: messages.length,
+                        itemBuilder: (context, index) {
+                          final msg = messages[index];
+                          final isMe = msg["isMe"] ?? false;
+                          return Align(
+                            alignment: isMe
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(
+                                  vertical: 4, horizontal: 8),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: isMe ? Colors.blue : Colors.grey[300],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                msg["message"] ?? "",
+                                style: TextStyle(
+                                  color: isMe ? Colors.white : Colors.black,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
           ),
           Padding(
             padding: const EdgeInsets.all(8.0),
