@@ -59,7 +59,7 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.CHAT,
-      page: () => const Chatsceen(),  // ✅ เปลี่ยนชื่อ
+      page: () => const ChatScreen(),  // ✅ เปลี่ยนชื่อ
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
 
