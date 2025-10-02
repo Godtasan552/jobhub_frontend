@@ -35,55 +35,118 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   // ดึงข้อมูล Wallet
-  Future<void> _loadWalletData() async {
-    setState(() => _isLoading = true);
-    
-    final token = await _getToken();
-    if (token == null) {
-      Get.snackbar('Error', 'กรุณาเข้าสู่ระบบ');
-      setState(() => _isLoading = false);
-      return;
-    }
-
-    try {
-      // ดึงยอดเงิน
-      final balanceResponse = await http.get(
-        Uri.parse('$baseUrl/wallet'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      // ดึงประวัติธุรกรรม
-      final transactionsResponse = await http.get(
-        Uri.parse('$baseUrl/wallet/transactions'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (balanceResponse.statusCode == 200 && transactionsResponse.statusCode == 200) {
-        final balanceData = json.decode(balanceResponse.body);
-        final transactionsData = json.decode(transactionsResponse.body);
-
-        setState(() {
-          _balance = (balanceData['data']['balance'] ?? 0).toDouble();
-          _totalEarned = (balanceData['data']['totalEarned'] ?? 0).toDouble();
-          _totalSpent = (balanceData['data']['totalSpent'] ?? 0).toDouble();
-          _transactions = transactionsData['data'] ?? [];
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      print('Error loading wallet: $e');
-      Get.snackbar('Error', 'ไม่สามารถโหลดข้อมูลได้');
-      setState(() => _isLoading = false);
-    }
+  // 1.// แก้ไขฟังก์ชัน _loadWalletData
+Future<void> _loadWalletData() async {
+  setState(() => _isLoading = true);
+  
+  final token = await _getToken();
+  if (token == null) {
+    Get.snackbar('Error', 'กรุณาเข้าสู่ระบบ');
+    setState(() => _isLoading = false);
+    return;
   }
 
-  // 1. เติมเงิน
+  try {
+    // ดึงยอดเงิน
+    final balanceResponse = await http.get(
+      Uri.parse('$baseUrl/wallet'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    // ดึงประวัติธุรกรรม
+    final transactionsResponse = await http.get(
+      Uri.parse('$baseUrl/wallet/transactions'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (balanceResponse.statusCode == 200 && transactionsResponse.statusCode == 200) {
+      final balanceData = json.decode(balanceResponse.body);
+      final transactionsData = json.decode(transactionsResponse.body);
+      
+      final transactions = transactionsData['data'] ?? [];
+      
+      // คำนวณ totalEarned และ totalSpent จากธุรกรรมเอง
+      double calculatedEarned = 0.0;
+      double calculatedSpent = 0.0;
+      final userId = storage.read('userId');
+      
+      for (var transaction in transactions) {
+        final amount = (transaction['amount'] ?? 0).toDouble();
+        final type = transaction['type'] ?? '';
+        final description = (transaction['description'] ?? '').toLowerCase();
+        final from = transaction['from'];
+        final to = transaction['to'];
+        
+        // ตรวจสอบว่าเป็นรายรับหรือรายจ่าย
+        bool isIncome = false;
+        
+        // เช็คจาก description
+        if (description.contains('เติมเงิน') || 
+            description.contains('top-up') || 
+            description.contains('add fund') ||
+            description.contains('deposit') ||
+            description.contains('รับเงิน') ||
+            description.contains('ได้รับ') ||
+            description.contains('received')) {
+          isIncome = true;
+        } else if (description.contains('ถอนเงิน') || 
+                   description.contains('withdraw') ||
+                   description.contains('โอนเงิน') ||
+                   description.contains('ส่งเงิน') ||
+                   description.contains('transfer') ||
+                   description.contains('send payment')) {
+          isIncome = false;
+        } 
+        // เช็คจาก type
+        else if (type == 'refund' || type == 'bonus') {
+          isIncome = true;
+        } else if (type == 'job_payment' || 
+                   type == 'milestone_payment' || 
+                   type == 'payroll') {
+          isIncome = false;
+        }
+        // เช็คจาก from/to
+        else if (userId != null) {
+          if (to == userId) {
+            isIncome = true;
+          } else if (from == userId) {
+            isIncome = false;
+          }
+        }
+        
+        // เพิ่มเข้ายอดรวม
+        if (isIncome) {
+          calculatedEarned += amount;
+        } else {
+          calculatedSpent += amount;
+        }
+      }
+
+      setState(() {
+        _balance = (balanceData['data']['balance'] ?? 0).toDouble();
+        _totalEarned = calculatedEarned; // ใช้ค่าที่คำนวณเอง
+        _totalSpent = calculatedSpent;   // ใช้ค่าที่คำนวณเอง
+        _transactions = transactions;
+        _isLoading = false;
+      });
+      
+      print('Balance: $_balance');
+      print('Total Earned (calculated): $calculatedEarned');
+      print('Total Spent (calculated): $calculatedSpent');
+      print('Transactions count: ${transactions.length}');
+    }
+  } catch (e) {
+    print('Error loading wallet: $e');
+    Get.snackbar('Error', 'ไม่สามารถโหลดข้อมูลได้');
+    setState(() => _isLoading = false);
+  }
+} 
   void _showAddFundsDialog() {
     final amountController = TextEditingController();
 
@@ -682,38 +745,60 @@ class _WalletPageState extends State<WalletPage> {
     );
   }
 
-  Widget _buildTransactionItem(Map<String, dynamic> transaction) {
+Widget _buildTransactionItem(Map<String, dynamic> transaction) {
   final type = transaction['type'] ?? '';
   final amount = (transaction['amount'] ?? 0).toDouble();
   final description = transaction['description'] ?? type;
-  final from = transaction['from'];
-  final to = transaction['to'];
-  final userId = storage.read('userId'); // เก็บ userId ไว้ตอน login
   
   final createdAt = transaction['createdAt'] != null
       ? DateTime.parse(transaction['createdAt'])
       : DateTime.now();
   
-  // แก้ไขตรงนี้ - เช็คว่าเป็นรายรับหรือรายจ่าย
+  // เช็คว่าเป็นรายรับหรือรายจ่าย
   bool isIncome = false;
   
-  if (type == 'refund' || type == 'bonus') {
-    // ได้รับเงินคืนหรือโบนัส
-    isIncome = true;
-  } else if (to == userId) {
-    // ถ้าเราเป็นผู้รับเงิน (to) = รายรับ
-    isIncome = true;
-  } else if (from == userId) {
-    // ถ้าเราเป็นผู้ส่งเงิน (from) = รายจ่าย
-    isIncome = false;
-  }
+  // 1. เช็คจาก description ก่อน (เพราะชัดเจนที่สุด)
+  final desc = description.toLowerCase();
   
-  // สำหรับ add-funds และ withdraw ให้เช็คจาก type โดยตรง
-  if (type == 'deposit' || description.contains('เติมเงิน') || description.contains('Wallet top-up')) {
-    isIncome = true;
+  if (desc.contains('เติมเงิน') || 
+      desc.contains('top-up') || 
+      desc.contains('add fund') ||
+      desc.contains('deposit')) {
+    isIncome = true; // เติมเงิน = รายรับ (เงินเข้า)
+  } else if (desc.contains('ถอนเงิน') || 
+             desc.contains('withdraw')) {
+    isIncome = false; // ถอนเงิน = รายจ่าย (เงินออก)
+  } else if (desc.contains('โอนเงิน') ||
+             desc.contains('ส่งเงิน') ||
+             desc.contains('transfer') ||
+             desc.contains('send payment')) {
+    isIncome = false; // โอนเงิน = รายจ่าย (เงินออก)
+  } else if (desc.contains('รับเงิน') ||
+             desc.contains('ได้รับ') ||
+             desc.contains('received')) {
+    isIncome = true; // รับเงิน = รายรับ (เงินเข้า)
+  } 
+  // 2. เช็คจาก type
+  else if (type == 'refund' || type == 'bonus') {
+    isIncome = true; // คืนเงิน/โบนัส = รายรับ
+  } else if (type == 'job_payment' || 
+             type == 'milestone_payment' || 
+             type == 'payroll') {
+    isIncome = false; // จ่ายเงิน = รายจ่าย
   }
-  if (type == 'withdrawal' || description.contains('ถอนเงิน')) {
-    isIncome = false;
+  // 3. เช็คจาก from/to (ถ้ายังไม่แน่ใจ)
+  else {
+    final from = transaction['from'];
+    final to = transaction['to'];
+    final userId = storage.read('userId');
+    
+    if (userId != null) {
+      if (to == userId) {
+        isIncome = true; // เราเป็นผู้รับ = รายรับ
+      } else if (from == userId) {
+        isIncome = false; // เราเป็นผู้ส่ง = รายจ่าย
+      }
+    }
   }
   
   final color = isIncome ? Colors.green : Colors.red;
