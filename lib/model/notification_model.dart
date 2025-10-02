@@ -27,7 +27,6 @@ class NotificationModel {
     required this.updatedAt,
   });
 
-  // ✅ เพิ่ม copyWith
   NotificationModel copyWith({
     String? id,
     String? userId,
@@ -60,7 +59,8 @@ class NotificationModel {
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
-      id: json['_id'] ?? '',
+      // ✅ แก้ไข: รองรับทั้ง "id" และ "_id"
+      id: json['id'] ?? json['_id'] ?? '',
       userId: json['userId'] ?? '',
       type: json['type'] ?? '',
       title: json['title'] ?? '',
@@ -77,7 +77,8 @@ class NotificationModel {
 
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      'id': id,
+      '_id': id, // ส่งทั้งสอง format
       'userId': userId,
       'type': type,
       'title': title,
