@@ -7,6 +7,8 @@ import '../model/job_model.dart';
 import '../utils/navigation_helper.dart';
 import '../routes/app_routes.dart';
 import 'package:intl/intl.dart';
+import '../screens/notification_screen.dart';
+import '../screens/profilePage.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -31,10 +33,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // 🎨 สีสำหรับแต่ละประเภทงาน
   final Map<String, Color> jobTypeColors = {
-    'freelance': const Color(0xFF3B82F6),    // น้ำเงิน
-    'part-time': const Color(0xFF10B981),    // เขียว
-    'contract': const Color(0xFFF59E0B),     // ส้ม
-    'full-time': const Color(0xFFEF4444),    // แดง
+    'freelance': const Color(0xFF3B82F6), // น้ำเงิน
+    'part-time': const Color(0xFF10B981), // เขียว
+    'contract': const Color(0xFFF59E0B), // ส้ม
+    'full-time': const Color(0xFFEF4444), // แดง
   };
 
   // 📋 หมวดหมู่งานครบถ้วนเหมือน Fastwork
@@ -102,15 +104,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _applyFilters() {
     setState(() {
       _filteredJobs = _jobs.where((job) {
-        bool categoryMatch = _selectedCategory == 'ทั้งหมด' || job.category == _selectedCategory;
-        bool typeMatch = _selectedType == 'ทั้งหมด' || job.type == _getTypeValue(_selectedType);
+        bool categoryMatch =
+            _selectedCategory == 'ทั้งหมด' || job.category == _selectedCategory;
+        bool typeMatch =
+            _selectedType == 'ทั้งหมด' ||
+            job.type == _getTypeValue(_selectedType);
         return categoryMatch && typeMatch;
       }).toList();
     });
   }
 
   String _getTypeValue(String typeName) {
-    final type = jobTypes.firstWhere((t) => t['name'] == typeName, orElse: () => {'value': 'all'});
+    final type = jobTypes.firstWhere(
+      (t) => t['name'] == typeName,
+      orElse: () => {'value': 'all'},
+    );
     return type['value'];
   }
 
@@ -193,26 +201,116 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildAppBar() {
     return SliverAppBar(
-      expandedHeight: 120,
+      expandedHeight: 150,
       floating: false,
       pinned: true,
-      backgroundColor: primaryColor,
       automaticallyImplyLeading: false,
-      flexibleSpace: FlexibleSpaceBar(
-        title: const Text(
-          'JobHub',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 30,
-            color: Colors.white,
+      backgroundColor: Colors.transparent,
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [primaryColor, secondaryColor],
           ),
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(24),
+            bottomRight: Radius.circular(24),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [primaryColor, secondaryColor],
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: SingleChildScrollView(
+              // <-- ห่อ Column
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 🔹 แถวบนสุด (โลโก้ + ปุ่ม)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "JobHub",
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.notifications_outlined,
+                              color: Colors.white,
+                              size: 26,
+                            ),
+                            onPressed: () {
+                              Get.to(() => NotificationScreen());// ไปหน้าแจ้งเตือน
+                            },
+                          ),
+                          const SizedBox(width: 6),
+GestureDetector(
+  onTap: () {
+    // ไปหน้า Profile
+    Get.to(() => ProfilePage());
+
+  },
+  child: CircleAvatar(
+    radius: 18,
+    backgroundColor: Colors.white,
+    child: Icon(Icons.person, color: primaryColor),
+  ),
+),
+
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // 🔹 Search bar
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            decoration: InputDecoration(
+                              hintText: "ค้นหางานที่คุณสนใจ...",
+                              hintStyle: TextStyle(color: Colors.grey[500]),
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -237,10 +335,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 8),
           Text(
             '${_filteredJobs.length} งานที่พร้อมให้คุณสมัคร',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           ),
         ],
       ),
@@ -272,7 +367,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             itemBuilder: (context, index) {
               final category = categories[index];
               final isSelected = _selectedCategory == category['name'];
-              
+
               return Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: InkWell(
@@ -296,7 +391,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       color: isSelected ? null : Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isSelected ? Colors.transparent : accentColor.withOpacity(0.3),
+                        color: isSelected
+                            ? Colors.transparent
+                            : accentColor.withOpacity(0.3),
                         width: 1.5,
                       ),
                       boxShadow: [
@@ -376,12 +473,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             itemBuilder: (context, index) {
               final type = jobTypes[index];
               final isSelected = _selectedType == type['name'];
-              
+
               // 🎨 กำหนดสีตามประเภทงาน
-              Color typeColor = type['value'] == 'all' 
-                  ? secondaryColor 
+              Color typeColor = type['value'] == 'all'
+                  ? secondaryColor
                   : _getTypeColor(type['value']);
-              
+
               return Padding(
                 padding: const EdgeInsets.only(right: 10),
                 child: InkWell(
@@ -393,12 +490,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                   borderRadius: BorderRadius.circular(25),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: isSelected ? typeColor : Colors.white,
                       borderRadius: BorderRadius.circular(25),
                       border: Border.all(
-                        color: isSelected ? Colors.transparent : typeColor.withOpacity(0.3),
+                        color: isSelected
+                            ? Colors.transparent
+                            : typeColor.withOpacity(0.3),
                         width: 1.5,
                       ),
                       boxShadow: [
@@ -481,7 +583,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 16),
               Text(
                 'ไม่พบงานที่คุณค้นหา',
-                style: TextStyle(fontSize: 18, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -525,11 +631,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            // 🔄 เปลี่ยนจาก Navigator.pushNamed เป็น Get.toNamed พร้อมส่ง JobModel
-            Get.toNamed(
-              AppRoutes.getJobDetailRoute(),
-              arguments: job, // ส่ง JobModel object แทน job.id
-            );
+            Get.toNamed(AppRoutes.getJobDetailRoute(), arguments: job);
           },
           borderRadius: BorderRadius.circular(20),
           child: Padding(
@@ -537,35 +639,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 🔹 Title + Status
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            job.title,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: primaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            job.category,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: secondaryColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        job.title,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
+                        ),
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: _getStatusColor(job.status).withOpacity(0.15),
                         borderRadius: BorderRadius.circular(20),
@@ -585,58 +677,76 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
+
+                // 🔹 Category
                 Text(
-                  job.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.5),
+                  job.category,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: secondaryColor,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+
+                // 🔹 Chips: type, budget, deadline
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    // 🎨 ใช้สีที่แตกต่างกันตามประเภทงาน
-                    _buildInfoChip(Icons.work_outline, _getTypeText(job.type), _getTypeColor(job.type)),
-                    _buildInfoChip(Icons.access_time, job.duration, accentColor),
+                    _buildInfoChip(
+                      Icons.work_outline,
+                      _getTypeText(job.type),
+                      _getTypeColor(job.type),
+                    ),
+                    _buildInfoChip(
+                      Icons.calendar_month,
+                      job.deadline != null
+                          ? DateFormat('dd/MM/yyyy').format(job.deadline!)
+                          : 'ไม่มีกำหนด',
+                      Colors.redAccent,
+                    ),
                   ],
                 ),
+
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [accentColor.withOpacity(0.1), accentColor.withOpacity(0.05)],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.people, size: 18, color: primaryColor),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${job.applicants.length}',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: primaryColor,
-                              ),
-                            ),
-                          ],
-                        ),
+
+                const SizedBox(height: 16),
+
+                // 🔹 Applicants
+                Row(
+                  children: [
+                    Icon(Icons.people, size: 18, color: primaryColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${job.applicants.length} ผู้สมัคร',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
                       ),
-                    ],
-                  ),
+                    ),
+                    const Spacer(), // ดันงบประมาณไปขวาสุด
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.attach_money,
+                          size: 26,
+                          color: Colors.green,
+                        ), // ไอคอนใหญ่ขึ้น
+                        const SizedBox(width: 4),
+                        Text(
+                          '฿${formatter.format(job.budget)}',
+                          style: TextStyle(
+                            fontSize: 22, // ✅ ขยายใหญ่
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ],
             ),
