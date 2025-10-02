@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart';
+
 class WalletPage extends StatefulWidget {
   const WalletPage({super.key});
 
@@ -15,9 +16,10 @@ class WalletPage extends StatefulWidget {
 class _WalletPageState extends State<WalletPage> {
   final storage = GetStorage();
 
-  static final String BASE_URL = dotenv.env['BASE_URL'] ?? 'http://localhost:5000';
+  static final String BASE_URL =
+      dotenv.env['BASE_URL'] ?? 'http://localhost:5000';
   static final String baseUrl = '$BASE_URL/api/v1';
-  
+
   bool _isLoading = false;
   double _balance = 0.0;
   double _totalEarned = 0.0;
@@ -36,7 +38,7 @@ class _WalletPageState extends State<WalletPage> {
 
   // ดึงข้อมูล Wallet
   // 1.// แก้ไขฟังก์ชัน _loadWalletData
-Future<void> _loadWalletData() async {
+  Future<void> _loadWalletData() async {
   setState(() => _isLoading = true);
   
   final token = await _getToken();
@@ -47,7 +49,6 @@ Future<void> _loadWalletData() async {
   }
 
   try {
-    // ดึงยอดเงิน
     final balanceResponse = await http.get(
       Uri.parse('$baseUrl/wallet'),
       headers: {
@@ -56,7 +57,6 @@ Future<void> _loadWalletData() async {
       },
     );
 
-    // ดึงประวัติธุรกรรม
     final transactionsResponse = await http.get(
       Uri.parse('$baseUrl/wallet/transactions'),
       headers: {
@@ -71,7 +71,6 @@ Future<void> _loadWalletData() async {
       
       final transactions = transactionsData['data'] ?? [];
       
-      // คำนวณ totalEarned และ totalSpent จากธุรกรรมเอง
       double calculatedEarned = 0.0;
       double calculatedSpent = 0.0;
       final userId = storage.read('userId');
@@ -83,41 +82,38 @@ Future<void> _loadWalletData() async {
         final from = transaction['from'];
         final to = transaction['to'];
         
-        // ตรวจสอบว่าเป็นรายรับหรือรายจ่าย
         bool isIncome = false;
         
-        // เช็คจาก description
+        // 1. เช็คจาก description ก่อน (สำหรับเติมเงิน/ถอนเงิน ที่ไม่มี from/to)
         if (description.contains('เติมเงิน') || 
             description.contains('top-up') || 
+            description.contains('wallet top-up') ||
             description.contains('add fund') ||
-            description.contains('deposit') ||
-            description.contains('รับเงิน') ||
-            description.contains('ได้รับ') ||
-            description.contains('received')) {
+            description.contains('deposit')) {
           isIncome = true;
+          print('Found income (add-funds): $description, amount: $amount');
         } else if (description.contains('ถอนเงิน') || 
-                   description.contains('withdraw') ||
-                   description.contains('โอนเงิน') ||
-                   description.contains('ส่งเงิน') ||
-                   description.contains('transfer') ||
-                   description.contains('send payment')) {
+                   description.contains('withdraw')) {
           isIncome = false;
-        } 
-        // เช็คจาก type
+          print('Found expense (withdraw): $description, amount: $amount');
+        }
+        // 2. เช็คจาก from/to (สำหรับโอนเงิน)
+        else if (userId != null && userId.toString().isNotEmpty) {
+          if (to != null && to.toString() == userId.toString()) {
+            isIncome = true; // เราเป็นผู้รับ
+            print('Found income (received): $description, amount: $amount');
+          } else if (from != null && from.toString() == userId.toString()) {
+            isIncome = false; // เราเป็นผู้ส่ง
+            print('Found expense (sent): $description, amount: $amount');
+          }
+        }
+        // 3. เช็คจาก type
         else if (type == 'refund' || type == 'bonus') {
           isIncome = true;
         } else if (type == 'job_payment' || 
                    type == 'milestone_payment' || 
                    type == 'payroll') {
           isIncome = false;
-        }
-        // เช็คจาก from/to
-        else if (userId != null) {
-          if (to == userId) {
-            isIncome = true;
-          } else if (from == userId) {
-            isIncome = false;
-          }
         }
         
         // เพิ่มเข้ายอดรวม
@@ -130,23 +126,25 @@ Future<void> _loadWalletData() async {
 
       setState(() {
         _balance = (balanceData['data']['balance'] ?? 0).toDouble();
-        _totalEarned = calculatedEarned; // ใช้ค่าที่คำนวณเอง
-        _totalSpent = calculatedSpent;   // ใช้ค่าที่คำนวณเอง
+        _totalEarned = calculatedEarned;
+        _totalSpent = calculatedSpent;
         _transactions = transactions;
         _isLoading = false;
       });
       
+      print('=== Summary ===');
       print('Balance: $_balance');
-      print('Total Earned (calculated): $calculatedEarned');
-      print('Total Spent (calculated): $calculatedSpent');
-      print('Transactions count: ${transactions.length}');
+      print('Total Earned: $calculatedEarned');
+      print('Total Spent: $calculatedSpent');
+      print('Transactions: ${transactions.length}');
     }
   } catch (e) {
     print('Error loading wallet: $e');
     Get.snackbar('Error', 'ไม่สามารถโหลดข้อมูลได้');
     setState(() => _isLoading = false);
   }
-} 
+}
+
   void _showAddFundsDialog() {
     final amountController = TextEditingController();
 
@@ -188,10 +186,7 @@ Future<void> _loadWalletData() async {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('ยกเลิก'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: const Text('ยกเลิก')),
           ElevatedButton(
             onPressed: () async {
               final amount = double.tryParse(amountController.text);
@@ -214,7 +209,7 @@ Future<void> _loadWalletData() async {
 
   Future<void> _addFunds(double amount) async {
     final token = await _getToken();
-    
+
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/wallet/add-funds'),
@@ -222,14 +217,11 @@ Future<void> _loadWalletData() async {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: json.encode({
-          'amount': amount,
-          'paymentMethod': 'mock_card',
-        }),
+        body: json.encode({'amount': amount, 'paymentMethod': 'mock_card'}),
       );
 
       final data = json.decode(response.body);
-      
+
       if (response.statusCode == 200 && data['success']) {
         Get.snackbar(
           'สำเร็จ',
@@ -290,15 +282,12 @@ Future<void> _loadWalletData() async {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('ยกเลิก'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: const Text('ยกเลิก')),
           ElevatedButton(
             onPressed: () async {
               final userId = userIdController.text.trim();
               final amount = double.tryParse(amountController.text);
-              
+
               if (userId.isEmpty) {
                 Get.snackbar('Error', 'กรุณากรอก User ID');
                 return;
@@ -311,14 +300,14 @@ Future<void> _loadWalletData() async {
                 Get.snackbar('Error', 'ยอดเงินไม่เพียงพอ');
                 return;
               }
-              
+
               Get.back();
               await _sendPayment(
-                userId, 
-                amount, 
-                descriptionController.text.trim().isEmpty 
-                  ? 'โอนเงิน' 
-                  : descriptionController.text.trim()
+                userId,
+                amount,
+                descriptionController.text.trim().isEmpty
+                    ? 'โอนเงิน'
+                    : descriptionController.text.trim(),
               );
             },
             style: ElevatedButton.styleFrom(
@@ -331,9 +320,13 @@ Future<void> _loadWalletData() async {
     );
   }
 
-  Future<void> _sendPayment(String toUserId, double amount, String description) async {
+  Future<void> _sendPayment(
+    String toUserId,
+    double amount,
+    String description,
+  ) async {
     final token = await _getToken();
-    
+
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/wallet/send-payment'),
@@ -350,7 +343,7 @@ Future<void> _loadWalletData() async {
       );
 
       final data = json.decode(response.body);
-      
+
       if (response.statusCode == 200 && data['success']) {
         Get.snackbar(
           'สำเร็จ',
@@ -409,10 +402,7 @@ Future<void> _loadWalletData() async {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('ยกเลิก'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: const Text('ยกเลิก')),
           ElevatedButton(
             onPressed: () async {
               final amount = double.tryParse(amountController.text);
@@ -427,9 +417,7 @@ Future<void> _loadWalletData() async {
               Get.back();
               await _withdraw(amount);
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
             child: const Text('ถอนเงิน'),
           ),
         ],
@@ -439,7 +427,7 @@ Future<void> _loadWalletData() async {
 
   Future<void> _withdraw(double amount) async {
     final token = await _getToken();
-    
+
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/wallet/withdraw'),
@@ -454,7 +442,7 @@ Future<void> _loadWalletData() async {
       );
 
       final data = json.decode(response.body);
-      
+
       if (response.statusCode == 200 && data['success']) {
         Get.snackbar(
           'สำเร็จ',
@@ -488,9 +476,11 @@ Future<void> _loadWalletData() async {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFA3CFBB)),
-            ))
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFA3CFBB)),
+              ),
+            )
           : RefreshIndicator(
               onRefresh: _loadWalletData,
               child: SingleChildScrollView(
@@ -651,18 +641,17 @@ Future<void> _loadWalletData() async {
     );
   }
 
-  Widget _buildStatItem(String label, double value, IconData icon, Color color) {
+  Widget _buildStatItem(
+    String label,
+    double value,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         Icon(icon, color: color, size: 20),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontSize: 12,
-          ),
-        ),
+        Text(label, style: TextStyle(color: color, fontSize: 12)),
         const SizedBox(height: 4),
         Text(
           '฿${value.toStringAsFixed(2)}',
@@ -749,56 +738,53 @@ Widget _buildTransactionItem(Map<String, dynamic> transaction) {
   final type = transaction['type'] ?? '';
   final amount = (transaction['amount'] ?? 0).toDouble();
   final description = transaction['description'] ?? type;
+  final from = transaction['from'];
+  final to = transaction['to'];
   
   final createdAt = transaction['createdAt'] != null
       ? DateTime.parse(transaction['createdAt'])
       : DateTime.now();
   
-  // เช็คว่าเป็นรายรับหรือรายจ่าย
+  final userId = storage.read('userId');
+  
   bool isIncome = false;
+  String displayDescription = description;
   
-  // 1. เช็คจาก description ก่อน (เพราะชัดเจนที่สุด)
+  // 1. เช็คจาก description สำหรับเติมเงิน/ถอนเงิน
   final desc = description.toLowerCase();
-  
   if (desc.contains('เติมเงิน') || 
       desc.contains('top-up') || 
-      desc.contains('add fund') ||
+      desc.contains('wallet top-up') ||
       desc.contains('deposit')) {
-    isIncome = true; // เติมเงิน = รายรับ (เงินเข้า)
+    isIncome = true;
+    displayDescription = 'เติมเงินเข้ากระเป๋า';
   } else if (desc.contains('ถอนเงิน') || 
              desc.contains('withdraw')) {
-    isIncome = false; // ถอนเงิน = รายจ่าย (เงินออก)
-  } else if (desc.contains('โอนเงิน') ||
-             desc.contains('ส่งเงิน') ||
-             desc.contains('transfer') ||
-             desc.contains('send payment')) {
-    isIncome = false; // โอนเงิน = รายจ่าย (เงินออก)
-  } else if (desc.contains('รับเงิน') ||
-             desc.contains('ได้รับ') ||
-             desc.contains('received')) {
-    isIncome = true; // รับเงิน = รายรับ (เงินเข้า)
-  } 
-  // 2. เช็คจาก type
-  else if (type == 'refund' || type == 'bonus') {
-    isIncome = true; // คืนเงิน/โบนัส = รายรับ
-  } else if (type == 'job_payment' || 
-             type == 'milestone_payment' || 
-             type == 'payroll') {
-    isIncome = false; // จ่ายเงิน = รายจ่าย
+    isIncome = false;
+    displayDescription = 'ถอนเงินออกจากกระเป๋า';
   }
-  // 3. เช็คจาก from/to (ถ้ายังไม่แน่ใจ)
-  else {
-    final from = transaction['from'];
-    final to = transaction['to'];
-    final userId = storage.read('userId');
-    
-    if (userId != null) {
-      if (to == userId) {
-        isIncome = true; // เราเป็นผู้รับ = รายรับ
-      } else if (from == userId) {
-        isIncome = false; // เราเป็นผู้ส่ง = รายจ่าย
-      }
+  // 2. เช็คจาก from/to สำหรับโอนเงิน
+  else if (userId != null && userId.toString().isNotEmpty) {
+    if (to != null && to.toString() == userId.toString()) {
+      // เราเป็นผู้รับเงิน
+      isIncome = true;
+      displayDescription = 'รับเงินโอน: ${description}';
+    } else if (from != null && from.toString() == userId.toString()) {
+      // เราเป็นผู้ส่งเงิน
+      isIncome = false;
+      displayDescription = 'โอนเงินออก: ${description}';
     }
+  }
+  // 3. เช็คจาก type
+  else if (type == 'refund') {
+    isIncome = true;
+    displayDescription = 'คืนเงิน: ${description}';
+  } else if (type == 'bonus') {
+    isIncome = true;
+    displayDescription = 'โบนัส: ${description}';
+  } else if (type == 'job_payment') {
+    isIncome = false;
+    displayDescription = 'จ่ายเงินค่างาน: ${description}';
   }
   
   final color = isIncome ? Colors.green : Colors.red;
@@ -825,7 +811,7 @@ Widget _buildTransactionItem(Map<String, dynamic> transaction) {
         ),
       ),
       title: Text(
-        description,
+        displayDescription,
         style: const TextStyle(
           fontWeight: FontWeight.w600,
           fontSize: 15,
