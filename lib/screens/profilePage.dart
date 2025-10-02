@@ -705,6 +705,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     trailing: InkWell(
                       onTap: () {
                         print('Pressed wallet');
+                        Get.toNamed('/wallet-page');
                       },
                       borderRadius: BorderRadius.circular(8),
                       child: Padding(

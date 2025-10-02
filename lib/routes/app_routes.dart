@@ -10,6 +10,7 @@ abstract class AppRoutes {
   static const PROFILE = '/profile'; // สำหรับในอนาคต
   static const String DASHBOARD = '/dashboard';
   static const String JOB_DETAIL = '/job-detail';
+  static const String WALLET_PAGE = '/wallet-page';
   
   // Helper methods สำหรับการนำทาง
   static String getSplashRoute() => SPLASH;
@@ -20,4 +21,5 @@ abstract class AppRoutes {
   static String getProfileRoute() => PROFILE;
   static String getDashboardRoute() => DASHBOARD;
   static String getJobDetailRoute() => JOB_DETAIL;
+  static String getWalletPageRoute() => WALLET_PAGE;
 }
