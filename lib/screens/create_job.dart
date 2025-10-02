@@ -22,7 +22,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   final TextEditingController _requirementsController = TextEditingController();
   final storage = GetStorage();
   String _selectedType = 'freelance';
-  String _selectedCategory = 'technology';
+  String _selectedCategory = 'เทคโนโลยีและโปรแกรม';
   DateTime? _selectedDeadline;
   bool _isLoading = false;
 
@@ -33,17 +33,21 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     'full-time',
   ];
 
+  // ✅ หมวดหมู่ครบถ้วนเหมือน Dashboard (ใช้ภาษาไทย)
   final List<String> _categories = [
-    'technology',
-    'web development',
-    'mobile development',
-    'design',
-    'marketing',
-    'writing',
-    'data entry',
-    'customer service',
-    'sales',
-    'other',
+    'เทคโนโลยีและโปรแกรม',
+    'การออกแบบ',
+    'การตลาดและประชาสัมพันธ์',
+    'การเขียนและแปล',
+    'ธุรกิจและการเงิน',
+    'วิดีโอและแอนิเมชัน',
+    'เสียงและดนตรี',
+    'การศึกษาและฝึกอบรม',
+    'การขายและบริการลูกค้า',
+    'ช่างและงานฝีมือ',
+    'ไลฟ์สไตล์และความงาม',
+    'งานบ้านและงานทั่วไป',
+    'อื่นๆ',
   ];
 
   final Map<String, String> _jobTypeLabels = {
@@ -94,13 +98,24 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       return;
     }
 
+    if (_selectedDeadline == null) {
+      Get.snackbar(
+        'Error',
+        'กรุณาเลือกวันที่สิ้นสุดรับสมัคร',
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[900],
+        snackPosition: SnackPosition.TOP,
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
     try {
       final token = storage.read('token');
-      print("try 1 passed");
+      
       if (token == null || token.isEmpty) {
         Get.snackbar(
           'Error',
@@ -117,7 +132,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
       final String baseUrl = dotenv.env['BASE_URL'] ?? 'http://localhost:5000';
 
-      // แปลง requirements จาก string เป็น array
       List<String> requirements = _requirementsController.text
           .split(',')
           .map((e) => e.trim())
@@ -136,8 +150,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         'deadline': _selectedDeadline!.toIso8601String(),
       };
 
-      print('📤 Sending request body: ${json.encode(requestBody)}');
-
       final response = await http.post(
         Uri.parse('$baseUrl/api/v1/jobs'),
         headers: {
@@ -147,17 +159,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         body: json.encode(requestBody),
       );
 
-      //print('📡 Response status: ${response.statusCode}');
-      //print('📡 Response body: ${response.body}');
-
       final data = json.decode(response.body);
-      //ตรงนี้เพิ่ม print เพื่อตรวจสอบค่า data
-      //print('Parsed data: $data');
-      //print('success value: ${data['success']}');
-      //print('success type: ${data['success']}.runtimeType');
+
       if (data['success'] == true) {
-        print('condition success == true passed');
-       // รีเซ็ตฟอร์ม
         if (mounted) {
           _formKey.currentState?.reset();
           _titleController.clear();
@@ -168,7 +172,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           setState(() {
             _selectedDeadline = null;
             _selectedType = 'freelance';
-            _selectedCategory = 'technology';
+            _selectedCategory = 'เทคโนโลยีและโปรแกรม';
           });
          Get.back();
          Get.snackbar(
@@ -178,15 +182,11 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           colorText: Colors.green[900],
           duration: const Duration(seconds: 2),
           snackPosition: SnackPosition.TOP,
-        );}
-         
-
-        // กลับไปหน้า Dashboard หรือ Job List
+        );
+        }
       } else {
-        // แสดง error message จาก API
         String errorMessage = data['message'] ?? 'ไม่สามารถสร้างงานได้';
 
-        // ตรวจสอบ validation errors แบบปลอดภัย
         if (data['data']?['errors'] != null) {
           List<dynamic> errors = data['data']!['errors'] as List<dynamic>;
           if (errors.isNotEmpty) {
@@ -204,12 +204,11 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         );
       }
     } catch (e) {
-      print('Error creating job snackbar bottom: $e');
       Get.snackbar(
         'Error',
         'เกิดข้อผิดพลาด: $e',
         backgroundColor: Colors.red[100],
-        colorText: const Color.fromARGB(255, 241, 171, 19),
+        colorText: Colors.red[900],
         snackPosition: SnackPosition.TOP,
         duration: const Duration(seconds: 4),
       );
@@ -233,7 +232,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -272,7 +270,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Title
                     TextFormField(
                       controller: _titleController,
                       decoration: const InputDecoration(
@@ -292,7 +289,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Description
                     TextFormField(
                       controller: _descriptionController,
                       decoration: const InputDecoration(
@@ -314,7 +310,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Job Type Dropdown
                     DropdownButtonFormField<String>(
                       value: _selectedType,
                       decoration: const InputDecoration(
@@ -335,17 +330,22 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Category Dropdown
+                    // ✅ Dropdown หมวดหมู่ใหม่ (รองรับข้อความยาว)
                     DropdownButtonFormField<String>(
                       value: _selectedCategory,
                       decoration: const InputDecoration(
                         labelText: 'หมวดหมู่',
                         prefixIcon: Icon(Icons.label),
                       ),
+                      isExpanded: true, // ป้องกันข้อความล้น
                       items: _categories.map((category) {
                         return DropdownMenuItem(
                           value: category,
-                          child: Text(category),
+                          child: Text(
+                            category,
+                            overflow: TextOverflow.ellipsis, // ตัดข้อความที่ยาวเกิน
+                            maxLines: 1,
+                          ),
                         );
                       }).toList(),
                       onChanged: (value) {
@@ -356,7 +356,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Budget
                     TextFormField(
                       controller: _budgetController,
                       decoration: const InputDecoration(
@@ -378,7 +377,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Duration
                     TextFormField(
                       controller: _durationController,
                       decoration: const InputDecoration(
@@ -395,20 +393,17 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Deadline
                     InkWell(
                       onTap: _selectDeadline,
                       child: InputDecorator(
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'วันที่สิ้นสุดรับสมัคร',
-                          prefixIcon: const Icon(Icons.calendar_today),
+                          prefixIcon: Icon(Icons.calendar_today),
                         ),
                         child: Text(
                           _selectedDeadline == null
-                              ? 'เลือกวันที่ บังคับ**'
-                              : DateFormat(
-                                  'dd/MM/yyyy',
-                                ).format(_selectedDeadline!),
+                              ? 'เลือกวันที่ (บังคับ)'
+                              : DateFormat('dd/MM/yyyy').format(_selectedDeadline!),
                           style: TextStyle(
                             color: _selectedDeadline == null
                                 ? Colors.grey[600]
@@ -419,20 +414,17 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Requirements
                     TextFormField(
                       controller: _requirementsController,
                       decoration: const InputDecoration(
                         labelText: 'คุณสมบัติที่ต้องการ (ไม่บังคับ)',
-                        hintText:
-                            'เช่น: React, Node.js, MongoDB (คั่นด้วยจุลภาค)',
+                        hintText: 'เช่น: React, Node.js, MongoDB (คั่นด้วยจุลภาค)',
                         prefixIcon: Icon(Icons.checklist),
                       ),
                       maxLines: 3,
                     ),
                     const SizedBox(height: 32),
 
-                    // Submit Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -449,9 +441,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               )
                             : const Text(
@@ -462,7 +452,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Info Box
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(

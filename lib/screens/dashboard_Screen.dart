@@ -1,9 +1,10 @@
 // lib/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
-import 'package:form_validate/screens/job_detail.dart';
 import 'package:get/get.dart';
 import '../services/job_service.dart';
+import '../services/auth_service.dart';
 import '../model/job_model.dart';
+import '../utils/navigation_helper.dart';
 import '../routes/app_routes.dart';
 import 'package:intl/intl.dart';
 
@@ -28,14 +29,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
   static const Color secondaryColor = Color(0xFF4C956C);
   static const Color backgroundColor = Color(0xFFF8FAF9);
 
+  // 🎨 สีสำหรับแต่ละประเภทงาน
+  final Map<String, Color> jobTypeColors = {
+    'freelance': const Color(0xFF3B82F6),    // น้ำเงิน
+    'part-time': const Color(0xFF10B981),    // เขียว
+    'contract': const Color(0xFFF59E0B),     // ส้ม
+    'full-time': const Color(0xFFEF4444),    // แดง
+  };
+
+  // 📋 หมวดหมู่งานครบถ้วนเหมือน Fastwork
   final List<Map<String, dynamic>> categories = [
     {'name': 'ทั้งหมด', 'icon': Icons.apps},
-    {'name': 'เทคโนโลยี', 'icon': Icons.computer},
-    {'name': 'การตลาด', 'icon': Icons.campaign},
-    {'name': 'ออกแบบ', 'icon': Icons.palette},
-    {'name': 'การเงิน', 'icon': Icons.account_balance},
-    {'name': 'การศึกษา', 'icon': Icons.school},
-    {'name': 'บริการ', 'icon': Icons.room_service},
+    {'name': 'เทคโนโลยีและโปรแกรม', 'icon': Icons.computer},
+    {'name': 'การออกแบบ', 'icon': Icons.palette},
+    {'name': 'การตลาดและประชาสัมพันธ์', 'icon': Icons.campaign},
+    {'name': 'การเขียนและแปล', 'icon': Icons.edit_note},
+    {'name': 'ธุรกิจและการเงิน', 'icon': Icons.account_balance},
+    {'name': 'วิดีโอและแอนิเมชัน', 'icon': Icons.movie},
+    {'name': 'เสียงและดนตรี', 'icon': Icons.music_note},
+    {'name': 'การศึกษาและฝึกอบรม', 'icon': Icons.school},
+    {'name': 'การขายและบริการลูกค้า', 'icon': Icons.shopping_cart},
+    {'name': 'ช่างและงานฝีมือ', 'icon': Icons.construction},
+    {'name': 'ไลฟ์สไตล์และความงาม', 'icon': Icons.face},
+    {'name': 'งานบ้านและงานทั่วไป', 'icon': Icons.home_repair_service},
     {'name': 'อื่นๆ', 'icon': Icons.more_horiz},
   ];
 
@@ -98,6 +114,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return type['value'];
   }
 
+  // 🎨 ดึงสีตามประเภทงาน
+  Color _getTypeColor(String type) {
+    return jobTypeColors[type] ?? Colors.grey;
+  }
 
   Color _getStatusColor(String status) {
     switch (status) {
@@ -197,7 +217,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
-      
     );
   }
 
@@ -358,6 +377,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               final type = jobTypes[index];
               final isSelected = _selectedType == type['name'];
               
+              // 🎨 กำหนดสีตามประเภทงาน
+              Color typeColor = type['value'] == 'all' 
+                  ? secondaryColor 
+                  : _getTypeColor(type['value']);
+              
               return Padding(
                 padding: const EdgeInsets.only(right: 10),
                 child: InkWell(
@@ -371,21 +395,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     decoration: BoxDecoration(
-                      gradient: isSelected
-                          ? LinearGradient(
-                              colors: [secondaryColor, accentColor],
-                            )
-                          : null,
-                      color: isSelected ? null : Colors.white,
+                      color: isSelected ? typeColor : Colors.white,
                       borderRadius: BorderRadius.circular(25),
                       border: Border.all(
-                        color: isSelected ? Colors.transparent : accentColor.withOpacity(0.3),
+                        color: isSelected ? Colors.transparent : typeColor.withOpacity(0.3),
                         width: 1.5,
                       ),
                       boxShadow: [
                         BoxShadow(
                           color: isSelected
-                              ? secondaryColor.withOpacity(0.3)
+                              ? typeColor.withOpacity(0.3)
                               : Colors.black.withOpacity(0.03),
                           blurRadius: isSelected ? 8 : 4,
                           offset: const Offset(0, 2),
@@ -398,7 +417,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Icon(
                           type['icon'],
                           size: 18,
-                          color: isSelected ? Colors.white : secondaryColor,
+                          color: isSelected ? Colors.white : typeColor,
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -445,7 +464,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
-                
               ],
             ),
           ),
@@ -507,10 +525,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            Navigator.pushNamed(
-              context,
+            // 🔄 เปลี่ยนจาก Navigator.pushNamed เป็น Get.toNamed พร้อมส่ง JobModel
+            Get.toNamed(
               AppRoutes.getJobDetailRoute(),
-              arguments: job.id,
+              arguments: job, // ส่ง JobModel object แทน job.id
             );
           },
           borderRadius: BorderRadius.circular(20),
@@ -579,8 +597,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _buildInfoChip(Icons.work_outline, _getTypeText(job.type)),
-                    _buildInfoChip(Icons.access_time, job.duration),
+                    // 🎨 ใช้สีที่แตกต่างกันตามประเภทงาน
+                    _buildInfoChip(Icons.work_outline, _getTypeText(job.type), _getTypeColor(job.type)),
+                    _buildInfoChip(Icons.access_time, job.duration, accentColor),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -595,7 +614,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
@@ -628,24 +646,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildInfoChip(IconData icon, String label) {
+  Widget _buildInfoChip(IconData icon, String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: accentColor.withOpacity(0.15),
+        color: color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: accentColor.withOpacity(0.3), width: 1),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: secondaryColor),
+          Icon(icon, size: 16, color: color),
           const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
-              color: primaryColor,
+              color: color,
               fontWeight: FontWeight.w600,
             ),
           ),

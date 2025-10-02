@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../model/job_model.dart'; 
 import 'package:get/get.dart'; 
 import 'dart:convert';
-import 'package:http/http.dart' as http; // 🎯 ต้องเพิ่ม package:http ใน pubspec.yaml
+import 'package:http/http.dart' as http;
 
 class job_detail extends StatefulWidget { 
   const job_detail({super.key});
@@ -19,22 +19,12 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   
-  // ⚠️ เปลี่ยนเป็น Base URL ของ API Backend ของคุณ
   static const String _baseUrl = 'http://your-backend-api.com/api/v1/jobs/';
 
-  // ----------------------------------------------------
-  // 🎯 TODO: ฟังก์ชันสำหรับดึง JWT Token
-  // ----------------------------------------------------
   Future<String?> _getAuthToken() async {
-    // แทนที่ด้วย logic การดึง JWT Token จาก SharedPreferences, GetStorage, หรือ Auth Provider
-    // หากไม่สามารถดึง Token ได้ ให้คืนค่า null 
-    // ตัวอย่าง: return GetStorage().read('jwt_token');
-
-    // ⛔️ ใช้ค่า dummy นี้ในการทดสอบเท่านั้น
-    // return 'YOUR_WORKER_JWT_TOKEN_HERE'; 
-    return null; // สมมติว่าคืนค่า null ถ้ายังไม่ได้จัดการ Auth
+    // TODO: Replace with actual token retrieval
+    return null;
   }
-  // ----------------------------------------------------
 
   @override
   void initState() {
@@ -78,26 +68,24 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
     }
   }
 
-  // --- Core Application Logic ---
-
   Future<void> _applyJob(String jobId, String coverLetter, int proposedBudget) async {
     final String url = '$_baseUrl$jobId/apply';
     final String? token = await _getAuthToken();
     
     if (token == null || token.isEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('กรุณาล็อกอินด้วยบัญชี Worker เพื่อสมัครงาน'), backgroundColor: Color(0xFFEF4444)),
       );
       return;
     }
     
-    // 1. แสดง Loading SnackBar
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('กำลังส่งใบสมัคร...'), backgroundColor: Color(0xFFF59E0B)),
     );
 
     try {
-      // 2. ส่ง Request HTTP POST
       final response = await http.post(
         Uri.parse(url),
         headers: {
@@ -110,9 +98,10 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
         }),
       );
 
+      if (!mounted) return;
+
       final responseBody = jsonDecode(response.body);
 
-      // 3. จัดการ Response
       if (response.statusCode >= 200 && response.statusCode < 300) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -120,7 +109,6 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
             backgroundColor: Color(0xFF10B981)
           ),
         );
-
       } else if (response.statusCode == 403 && (responseBody['error'] == 'WORKER_NOT_APPROVED' || responseBody['message']?.contains('Worker is not approved') == true)) {
          ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -135,15 +123,13 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('❌ ข้อผิดพลาดในการเชื่อมต่อ: ${e.toString()}'), backgroundColor: const Color(0xFFEF4444)),
       );
     }
   }
 
-  // ----------------------------------------------------
-  // ฟังก์ชันสำหรับแสดง Modal Form
-  // ----------------------------------------------------
   Future<void> _showApplicationForm(String jobId) async {
     final TextEditingController coverLetterController = TextEditingController();
     final TextEditingController proposedBudgetController = TextEditingController();
@@ -169,7 +155,6 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
                 ),
                 const Divider(height: 25),
 
-                // 📝 Cover Letter
                 const Text('จดหมายปะหน้า/เหตุผลที่สมัคร', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
                 const SizedBox(height: 8),
                 TextField(
@@ -184,7 +169,6 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
                 ),
                 const SizedBox(height: 20),
 
-                // 💰 Proposed Budget
                 const Text('งบประมาณที่คุณเสนอ (เป็นตัวเลข)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
                 const SizedBox(height: 8),
                 TextField(
@@ -199,11 +183,9 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
                 ),
                 const SizedBox(height: 30),
 
-                // 🚀 ปุ่มส่งใบสมัคร
                 ElevatedButton(
                   onPressed: () {
                     final String coverLetter = coverLetterController.text.trim();
-                    // ถ้าไม่กรอก ให้ใช้ budget เดิมของงานเป็นค่า default
                     final int proposedBudget = int.tryParse(proposedBudgetController.text.trim()) ?? _job!.budget.toInt();
 
                     if (coverLetter.isEmpty) {
@@ -213,7 +195,6 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
                       return;
                     }
                     
-                    // ส่งผลลัพธ์กลับไป
                     Navigator.pop(context, {
                       'coverLetter': coverLetter,
                       'proposedBudget': proposedBudget,
@@ -235,19 +216,11 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
       },
     );
 
-    // หลังจาก Modal ถูกปิด และมีข้อมูลส่งกลับมา
     if (result != null && result is Map<String, dynamic>) {
-      _applyJob(
-        jobId,
-        result['coverLetter'],
-        result['proposedBudget'],
-      );
+      _applyJob(jobId, result['coverLetter'], result['proposedBudget']);
     }
   }
 
-
-  // --- Helper Methods (ใช้โค้ดเดิมของคุณ) ---
-  
   Color _getStatusColor(String status) {
     switch (status) {
       case 'active': return const Color(0xFF10B981);
@@ -325,8 +298,8 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [const Color(0xFF3B82F6), const Color(0xFF1E3A8A)],
+              gradient: const LinearGradient(
+                colors: [Color(0xFF3B82F6), Color(0xFF1E3A8A)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -403,126 +376,64 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
   }
 
   @override
-Widget build(BuildContext context) {
-  if (_job == null) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF3B82F6), Color(0xFF1E3A8A)],
-          ),
-        ),
-        child: const Center(
-          child: CircularProgressIndicator(color: Colors.white),
-        ),
-      ),
-    );
-  }
-
-  final job = _job!;
-  final formatter = NumberFormat('#,##0');
-  final dateFormatter = DateFormat('dd MMM yyyy, HH:mm');
-  final notificationController = Get.find();
-
-  return Scaffold(
-    extendBodyBehindAppBar: true,
-    appBar: AppBar(
-      title: Text(job.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      foregroundColor: Colors.white,
-      flexibleSpace: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF3B82F6), Color(0xFF1E3A8A)],
-          ),
-        ),
-      ),
-    ),
-
-    // ✅ ใส่ BottomNavigationBar ตรง ๆ
-    bottomNavigationBar: Obx(() {
-      return BottomNavigationBar(
-        currentIndex: 0, // แท็บ Home
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Get.back(); // กลับหน้าก่อนหน้า
-              break;
-            default:
-              Get.off(() => BottomNav(initialIndex: index));
-              break;
-          }
-        },
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        items: [
-          const BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          const BottomNavigationBarItem(icon: Icon(Icons.search), label: "Create Job"),
-          const BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Chat"),
-          BottomNavigationBarItem(
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Icons.notifications),
-                if (notificationController.unreadCount.value > 0)
-                  Positioned(
-                    right: -6,
-                    top: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                      child: Text(
-                        notificationController.unreadCount.value > 9
-                            ? '9+'
-                            : notificationController.unreadCount.value.toString(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
+  Widget build(BuildContext context) {
+    if (_job == null) {
+      return Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFF3B82F6), Color(0xFF1E3A8A)],
             ),
-            label: "Notification",
           ),
-          const BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-        ],
-      );
-    }),
-
-    body: FadeTransition(
-      opacity: _fadeAnimation,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFF3B82F6).withOpacity(0.05),
-              Colors.white,
-            ],
-            stops: const [0.0, 0.3],
+          child: const Center(
+            child: CircularProgressIndicator(color: Colors.white),
           ),
         ),
+      );
+    }
+
+    final job = _job!;
+    final formatter = NumberFormat('#,##0');
+    final dateFormatter = DateFormat('dd MMM yyyy, HH:mm');
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: Text(job.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF3B82F6), Color(0xFF1E3A8A)],
+            ),
+          ),
+        ),
+      ),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF3B82F6).withOpacity(0.05),
+                Colors.white,
+              ],
+              stops: const [0.0, 0.3],
+            ),
+          ),
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 100, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 💰 Hero Section - งบประมาณ
                 Container(
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
@@ -629,7 +540,6 @@ Widget build(BuildContext context) {
                 
                 const SizedBox(height: 8),
 
-                // 📄 รายละเอียดงาน
                 _buildSectionHeader('รายละเอียดงาน', Icons.description),
                 Container(
                   decoration: BoxDecoration(
@@ -657,7 +567,6 @@ Widget build(BuildContext context) {
                   ),
                 ),
                 
-                // 🛠️ คุณสมบัติและข้อกำหนด
                 if (job.requirements != null && job.requirements!.isNotEmpty) ...[
                   _buildSectionHeader('คุณสมบัติและข้อกำหนด', Icons.checklist_rtl),
                   Container(
@@ -714,7 +623,6 @@ Widget build(BuildContext context) {
                   ),
                 ],
 
-                // 📦 ข้อมูลโครงการ
                 _buildSectionHeader('ข้อมูลโครงการ', Icons.info_outline),
                 Container(
                   decoration: BoxDecoration(
@@ -792,7 +700,6 @@ Widget build(BuildContext context) {
                 
                 const SizedBox(height: 40),
 
-                // 🚀 ปุ่มสมัครงาน (แก้ไขให้เรียก Modal Form)
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
@@ -806,7 +713,6 @@ Widget build(BuildContext context) {
                   ),
                   child: ElevatedButton(
                     onPressed: job.status == 'active' ? () {
-                      // 💡 เรียกฟังก์ชันแสดงฟอร์มสมัครงาน
                       _showApplicationForm(job.id); 
                     } : null, 
                     style: ElevatedButton.styleFrom(
