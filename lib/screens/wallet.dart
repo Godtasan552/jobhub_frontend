@@ -683,60 +683,85 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   Widget _buildTransactionItem(Map<String, dynamic> transaction) {
-    final type = transaction['type'] ?? '';
-    final amount = (transaction['amount'] ?? 0).toDouble();
-    final description = transaction['description'] ?? type;
-    final createdAt = transaction['createdAt'] != null
-        ? DateTime.parse(transaction['createdAt'])
-        : DateTime.now();
-    
-    final isIncome = type.contains('refund') || type.contains('received');
-    final color = isIncome ? Colors.green : Colors.red;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey[200]!),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-            color: color,
-            size: 24,
-          ),
-        ),
-        title: Text(
-          description,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 15,
-          ),
-        ),
-        subtitle: Text(
-          DateFormat('dd MMM yyyy, HH:mm').format(createdAt),
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 13,
-          ),
-        ),
-        trailing: Text(
-          '${isIncome ? '+' : '-'}฿${amount.toStringAsFixed(2)}',
-          style: TextStyle(
-            color: color,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
+  final type = transaction['type'] ?? '';
+  final amount = (transaction['amount'] ?? 0).toDouble();
+  final description = transaction['description'] ?? type;
+  final from = transaction['from'];
+  final to = transaction['to'];
+  final userId = storage.read('userId'); // เก็บ userId ไว้ตอน login
+  
+  final createdAt = transaction['createdAt'] != null
+      ? DateTime.parse(transaction['createdAt'])
+      : DateTime.now();
+  
+  // แก้ไขตรงนี้ - เช็คว่าเป็นรายรับหรือรายจ่าย
+  bool isIncome = false;
+  
+  if (type == 'refund' || type == 'bonus') {
+    // ได้รับเงินคืนหรือโบนัส
+    isIncome = true;
+  } else if (to == userId) {
+    // ถ้าเราเป็นผู้รับเงิน (to) = รายรับ
+    isIncome = true;
+  } else if (from == userId) {
+    // ถ้าเราเป็นผู้ส่งเงิน (from) = รายจ่าย
+    isIncome = false;
   }
+  
+  // สำหรับ add-funds และ withdraw ให้เช็คจาก type โดยตรง
+  if (type == 'deposit' || description.contains('เติมเงิน') || description.contains('Wallet top-up')) {
+    isIncome = true;
+  }
+  if (type == 'withdrawal' || description.contains('ถอนเงิน')) {
+    isIncome = false;
+  }
+  
+  final color = isIncome ? Colors.green : Colors.red;
+
+  return Card(
+    margin: const EdgeInsets.only(bottom: 12),
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: BorderSide(color: Colors.grey[200]!),
+    ),
+    child: ListTile(
+      contentPadding: const EdgeInsets.all(16),
+      leading: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(
+          isIncome ? Icons.arrow_downward : Icons.arrow_upward,
+          color: color,
+          size: 24,
+        ),
+      ),
+      title: Text(
+        description,
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 15,
+        ),
+      ),
+      subtitle: Text(
+        DateFormat('dd MMM yyyy, HH:mm').format(createdAt),
+        style: TextStyle(
+          color: Colors.grey[600],
+          fontSize: 13,
+        ),
+      ),
+      trailing: Text(
+        '${isIncome ? '+' : '-'}฿${amount.toStringAsFixed(2)}',
+        style: TextStyle(
+          color: color,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ),
+  );
+}
 }
