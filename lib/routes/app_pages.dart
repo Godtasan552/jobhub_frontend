@@ -12,7 +12,7 @@ import '../screens/profilePage.dart';
 import '../screens/dashboard_Screen.dart'; // ✅ แก้ชื่อให้ตรง
 import '../screens/notification_screen.dart';
 
-
+import '../screens/wallet.dart';
 class AppPages {
   AppPages._();
 
@@ -67,6 +67,31 @@ class AppPages {
     GetPage(
       name: AppRoutes.NOTIFICATION,
       page: () => const NotificationScreen(),
+      name: AppRoutes.DASHBOARD,
+      page: () => const DashboardScreen(),  // ✅ เปลี่ยนชื่อ
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 300),
+
+    ),
+    GetPage(
+      name: AppRoutes.WALLET_PAGE,
+      page: () => const WalletPage(),  // เพิ่ม WalletPage
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+
+    // อนาคตสามารถเพิ่ม routes อื่นๆ ได้ที่นี่
+    /*
+    GetPage(
+      name: AppRoutes.HOME,
+      page: () => const HomeScreen(),
+      transition: Transition.zoom,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    
+    GetPage(
+      name: AppRoutes.PROFILE,
+      page: () => const ProfileScreen(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

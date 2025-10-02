@@ -12,6 +12,7 @@ abstract class AppRoutes {
   static const String JOB_DETAIL = '/job-detail';
   static const String NOTIFICATION = '/notification';
   static const String DEBUGNOTI = '/debugnotification';
+  static const String WALLET_PAGE = '/wallet-page';
   
 
   // Helper methods สำหรับการนำทาง
@@ -26,4 +27,5 @@ abstract class AppRoutes {
   static String getNotificationRoute() => NOTIFICATION;
   static String getDebugRoute() => DEBUGNOTI;
   
+  static String getWalletPageRoute() => WALLET_PAGE;
 }
