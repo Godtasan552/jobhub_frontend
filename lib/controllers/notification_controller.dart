@@ -1,3 +1,5 @@
+// lib/controllers/notification_controller.dart
+
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../model/notification_model.dart';
@@ -8,7 +10,6 @@ class NotificationController extends GetxController {
   final SocketService _socketService = SocketService();
   final GetStorage _storage = GetStorage();
   
-  // Observable variables
   var notifications = <NotificationModel>[].obs;
   var unreadCount = 0.obs;
   var isLoading = false.obs;
@@ -19,117 +20,148 @@ class NotificationController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    print('🎯 [NotificationController] Initializing...');
     _initializeNotifications();
   }
 
-  // เริ่มต้น Notification System
   void _initializeNotifications() {
-    // ดึง accessToken จาก GetStorage
-    _accessToken = _storage.read('accessToken');
-    
-    if (_accessToken == null || _accessToken!.isEmpty) {
-      print('⚠️ No access token found');
-      return;
-    }
+  print('🎯 [NotificationController] Starting initialization');
+  
+  final accessToken = _storage.read('token');
 
-    print('✅ Access Token found: ${_accessToken!.substring(0, 20)}...');
-    
-    // เชื่อมต่อ Socket
-    _socketService.connect(_accessToken!);
-
-    // ตั้งค่า callbacks
-    _socketService.onNotificationReceived = (notification) {
-      notifications.insert(0, notification);
-      unreadCount.value++;
-      
-      // แสดง snackbar เมื่อมีการแจ้งเตือนใหม่
-      Get.snackbar(
-        notification.title,
-        notification.message,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-      );
-    };
-
-    _socketService.onUnreadCountChanged = (count) {
-      unreadCount.value = count;
-    };
-
-    _socketService.onNotificationRead = (notificationId) {
-      final index = notifications.indexWhere((n) => n.id == notificationId);
-      if (index != -1) {
-        final notification = notifications[index];
-        notifications[index] = NotificationModel(
-          id: notification.id,
-          userId: notification.userId,
-          type: notification.type,
-          title: notification.title,
-          message: notification.message,
-          referenceId: notification.referenceId,
-          referenceType: notification.referenceType,
-          read: true,
-          readAt: DateTime.now(),
-          actionUrl: notification.actionUrl,
-          createdAt: notification.createdAt,
-          updatedAt: DateTime.now(),
-        );
-        if (unreadCount.value > 0) unreadCount.value--;
-      }
-    };
-
-    // ✅ แก้ไขตรงนี้: อัพเดทสถานะการเชื่อมต่อ
-    ever(_socketService.isConnected, (connected) {
-      isConnected.value = connected; // ✅ ใช้ .value
-    });
-
-    // โหลดข้อมูลเริ่มต้น
-    loadNotifications();
-    loadUnreadCount();
+  if (accessToken == null || accessToken.isEmpty) {
+    print('⚠️ [NotificationController] No access token found');
+    return;
   }
 
-  // ... โค้ดส่วนอื่นๆ เหมือนเดิม
-  
-  // โหลดการแจ้งเตือนทั้งหมด
+  _accessToken = accessToken; // ✅ เก็บไว้ใช้ต่อ
+
+  print('✅ [NotificationController] Access Token found: ${_accessToken!.substring(0, 20)}...');
+
+  // เชื่อมต่อ Socket
+  print('🔌 [NotificationController] Connecting to Socket.IO...');
+  _socketService.connect(_accessToken!);
+
+  // ตั้งค่า callbacks
+  _socketService.onNotificationReceived = (notification) {
+    print('📨 [NotificationController] New notification received: ${notification.title}');
+    notifications.insert(0, notification);
+    unreadCount.value++;
+
+    print('📊 [NotificationController] Updated counts - Total: ${notifications.length}, Unread: ${unreadCount.value}');
+    
+    Get.snackbar(
+      notification.title,
+      notification.message,
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 3),
+    );
+  };
+
+  _socketService.onUnreadCountChanged = (count) {
+    print('📊 [NotificationController] Unread count changed: $count');
+    unreadCount.value = count;
+  };
+
+  _socketService.onNotificationRead = (notificationId) {
+    print('✅ [NotificationController] Notification marked as read: $notificationId');
+    final index = notifications.indexWhere((n) => n.id == notificationId);
+    if (index != -1) {
+      final notification = notifications[index];
+      notifications[index] = notification.copyWith(
+        read: true,
+        readAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      if (unreadCount.value > 0) unreadCount.value--;
+      print('📊 [NotificationController] New unread count: ${unreadCount.value}');
+    }
+  };
+
+  // อัพเดทสถานะการเชื่อมต่อ
+  ever(_socketService.isConnected, (connected) {
+    print('🔌 [NotificationController] Socket connection status changed: $connected');
+    isConnected.value = connected;
+  });
+
+  // โหลดข้อมูลเริ่มต้น
+  print('📥 [NotificationController] Loading initial data...');
+  loadNotifications();
+  loadUnreadCount();
+}
+
+
   Future<void> loadNotifications() async {
-    if (_accessToken == null) return;
+    print('📥 [NotificationController] loadNotifications() called');
+    
+    if (_accessToken == null) {
+      print('⚠️ [NotificationController] No access token, skipping load');
+      return;
+    }
     
     isLoading.value = true;
+    print('⏳ [NotificationController] Loading notifications from API...');
 
     try {
       final result = await NotificationService.getNotifications(_accessToken!);
+      print('✅ [NotificationController] Received ${result.length} notifications from API');
+      
+      if (result.isNotEmpty) {
+        print('📋 [NotificationController] First notification:');
+        print('   ID: ${result[0].id}');
+        print('   Title: ${result[0].title}');
+        print('   Read: ${result[0].read}');
+      }
+      
       notifications.value = result;
+      print('📊 [NotificationController] Updated local notifications list: ${notifications.length} items');
+      
     } catch (e) {
-      print('Error loading notifications: $e');
+      print('❌ [NotificationController] Error loading notifications: $e');
+      print('   Stack trace: ${StackTrace.current}');
       Get.snackbar(
         'ข้อผิดพลาด',
-        'ไม่สามารถโหลดการแจ้งเตือนได้',
+        'ไม่สามารถโหลดการแจ้งเตือนได้: $e',
         snackPosition: SnackPosition.BOTTOM,
       );
     } finally {
       isLoading.value = false;
+      print('✅ [NotificationController] Loading completed. isLoading = false');
     }
   }
 
-  // โหลดจำนวนที่ยังไม่อ่าน
   Future<void> loadUnreadCount() async {
-    if (_accessToken == null) return;
+    print('📥 [NotificationController] loadUnreadCount() called');
+    
+    if (_accessToken == null) {
+      print('⚠️ [NotificationController] No access token, skipping load');
+      return;
+    }
 
     try {
       final count = await NotificationService.getUnreadCount(_accessToken!);
+      print('✅ [NotificationController] Unread count from API: $count');
       unreadCount.value = count;
     } catch (e) {
-      print('Error loading unread count: $e');
+      print('❌ [NotificationController] Error loading unread count: $e');
     }
   }
 
-  // ทำเครื่องหมายว่าอ่านแล้ว
   Future<void> markAsRead(List<String> notificationIds) async {
-    if (_accessToken == null) return;
+    print('✅ [NotificationController] markAsRead() called with ${notificationIds.length} IDs');
+    print('   IDs: $notificationIds');
+    
+    if (_accessToken == null) {
+      print('⚠️ [NotificationController] No access token, skipping');
+      return;
+    }
 
     try {
       final success = await NotificationService.markAsRead(_accessToken!, notificationIds);
+      print('📡 [NotificationController] API response: $success');
+      
       if (success) {
-        // อัพเดท local state
+        print('✅ [NotificationController] Updating local state...');
         for (var id in notificationIds) {
           final index = notifications.indexWhere((n) => n.id == id);
           if (index != -1 && !notifications[index].read) {
@@ -149,16 +181,19 @@ class NotificationController extends GetxController {
               updatedAt: DateTime.now(),
             );
             if (unreadCount.value > 0) unreadCount.value--;
+            print('   ✅ Marked as read: $id');
           }
         }
         
-        // ส่งผ่าน Socket ด้วย
+        // ส่งผ่าน Socket
         for (var id in notificationIds) {
           _socketService.markAsRead(id);
         }
+        
+        print('📊 [NotificationController] Final unread count: ${unreadCount.value}');
       }
     } catch (e) {
-      print('Error marking as read: $e');
+      print('❌ [NotificationController] Error marking as read: $e');
       Get.snackbar(
         'ข้อผิดพลาด',
         'ไม่สามารถทำเครื่องหมายว่าอ่านแล้วได้',
@@ -167,12 +202,18 @@ class NotificationController extends GetxController {
     }
   }
 
-  // ลบการแจ้งเตือน
   Future<void> deleteNotification(String notificationId) async {
-    if (_accessToken == null) return;
+    print('🗑️ [NotificationController] deleteNotification() called: $notificationId');
+    
+    if (_accessToken == null) {
+      print('⚠️ [NotificationController] No access token, skipping');
+      return;
+    }
 
     try {
       final success = await NotificationService.deleteNotification(_accessToken!, notificationId);
+      print('📡 [NotificationController] API response: $success');
+      
       if (success) {
         final index = notifications.indexWhere((n) => n.id == notificationId);
         if (index != -1) {
@@ -180,10 +221,11 @@ class NotificationController extends GetxController {
             unreadCount.value--;
           }
           notifications.removeAt(index);
+          print('✅ [NotificationController] Deleted from local list. Remaining: ${notifications.length}');
         }
       }
     } catch (e) {
-      print('Error deleting notification: $e');
+      print('❌ [NotificationController] Error deleting notification: $e');
       Get.snackbar(
         'ข้อผิดพลาด',
         'ไม่สามารถลบการแจ้งเตือนได้',
@@ -194,6 +236,7 @@ class NotificationController extends GetxController {
 
   @override
   void onClose() {
+    print('🔌 [NotificationController] Closing and disconnecting Socket');
     _socketService.disconnect();
     super.onClose();
   }

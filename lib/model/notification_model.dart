@@ -27,6 +27,37 @@ class NotificationModel {
     required this.updatedAt,
   });
 
+  // ✅ เพิ่ม copyWith
+  NotificationModel copyWith({
+    String? id,
+    String? userId,
+    String? type,
+    String? title,
+    String? message,
+    String? referenceId,
+    String? referenceType,
+    bool? read,
+    DateTime? readAt,
+    String? actionUrl,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return NotificationModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      referenceId: referenceId ?? this.referenceId,
+      referenceType: referenceType ?? this.referenceType,
+      read: read ?? this.read,
+      readAt: readAt ?? this.readAt,
+      actionUrl: actionUrl ?? this.actionUrl,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
       id: json['_id'] ?? '',

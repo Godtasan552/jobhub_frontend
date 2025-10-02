@@ -1,8 +1,9 @@
 // lib/services/socket_service.dart
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter/foundation.dart';
-import 'package:get/get.dart'; // ✅ เพิ่ม
+import 'package:get/get.dart';
 import '../model/notification_model.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class SocketService {
   static final SocketService _instance = SocketService._internal();
@@ -10,17 +11,19 @@ class SocketService {
   SocketService._internal();
 
   IO.Socket? _socket;
-  final String _baseUrl = 'https://jobhubbackend-production-cc57.up.railway.app';
-  
-  // ✅ ใช้ RxBool แทน
+
+  // ✅ อ่าน BASE_URL จาก .env
+  static final String baseUrl = dotenv.env['BASE_URL'] ?? '';
+
+  // ✅ ใช้ RxBool สำหรับ state
   var isConnected = false.obs;
-  
+
   // Callbacks
   Function(NotificationModel)? onNotificationReceived;
   Function(int)? onUnreadCountChanged;
   Function(String)? onNotificationRead;
 
-  // เชื่อมต่อ Socket
+  // ✅ เชื่อมต่อ Socket
   void connect(String accessToken) {
     if (_socket != null && _socket!.connected) {
       debugPrint('Socket already connected');
@@ -28,7 +31,7 @@ class SocketService {
     }
 
     try {
-      _socket = IO.io(_baseUrl, <String, dynamic>{
+      _socket = IO.io(baseUrl, <String, dynamic>{
         'transports': ['websocket'],
         'autoConnect': false,
         'auth': {
@@ -41,17 +44,17 @@ class SocketService {
       // Event Listeners
       _socket!.onConnect((_) {
         debugPrint('✅ Socket connected');
-        isConnected.value = true; // ✅ อัพเดท
+        isConnected.value = true;
       });
 
       _socket!.onDisconnect((_) {
         debugPrint('❌ Socket disconnected');
-        isConnected.value = false; // ✅ อัพเดท
+        isConnected.value = false;
       });
 
       _socket!.onConnectError((error) {
         debugPrint('❌ Socket connection error: $error');
-        isConnected.value = false; // ✅ อัพเดท
+        isConnected.value = false;
       });
 
       _socket!.onError((error) {
@@ -100,7 +103,7 @@ class SocketService {
       _socket!.disconnect();
       _socket!.dispose();
       _socket = null;
-      isConnected.value = false; // ✅ อัพเดท
+      isConnected.value = false;
       debugPrint('Socket disconnected and disposed');
     }
   }

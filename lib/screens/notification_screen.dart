@@ -13,6 +13,11 @@ class NotificationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final NotificationController controller = Get.find<NotificationController>();
 
+    // ✅ Log เมื่อเข้าหน้า
+    print('🔔 [NotificationScreen] Opening notification screen');
+    print('🔔 [NotificationScreen] Current notifications count: ${controller.notifications.length}');
+    print('🔔 [NotificationScreen] Unread count: ${controller.unreadCount.value}');
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('การแจ้งเตือน'),
@@ -21,10 +26,12 @@ class NotificationScreen extends StatelessWidget {
             if (controller.unreadCount.value > 0) {
               return TextButton(
                 onPressed: () {
+                  print('🔔 [NotificationScreen] Mark all as read button pressed');
                   final unreadIds = controller.notifications
                       .where((n) => !n.read)
                       .map((n) => n.id)
                       .toList();
+                  print('🔔 [NotificationScreen] Unread IDs: $unreadIds');
                   if (unreadIds.isNotEmpty) {
                     controller.markAsRead(unreadIds);
                   }
@@ -40,17 +47,22 @@ class NotificationScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
+              print('🔔 [NotificationScreen] Refresh button pressed');
               controller.loadNotifications();
             },
           ),
         ],
       ),
       body: Obx(() {
+        print('🔔 [NotificationScreen] Rebuilding body - isLoading: ${controller.isLoading.value}, count: ${controller.notifications.length}');
+        
         if (controller.isLoading.value) {
+          print('🔔 [NotificationScreen] Showing loading indicator');
           return const Center(child: CircularProgressIndicator());
         }
 
         if (controller.notifications.isEmpty) {
+          print('🔔 [NotificationScreen] No notifications to display');
           return const Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -63,25 +75,34 @@ class NotificationScreen extends StatelessWidget {
           );
         }
 
+        print('🔔 [NotificationScreen] Displaying ${controller.notifications.length} notifications');
         return RefreshIndicator(
-          onRefresh: () => controller.loadNotifications(),
+          onRefresh: () {
+            print('🔔 [NotificationScreen] Pull to refresh triggered');
+            return controller.loadNotifications();
+          },
           child: ListView.separated(
             itemCount: controller.notifications.length,
             separatorBuilder: (context, index) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final notification = controller.notifications[index];
+              print('🔔 [NotificationScreen] Building tile for: ${notification.id} - ${notification.title}');
               return NotificationTile(
                 notification: notification,
                 onTap: () {
+                  print('🔔 [NotificationScreen] Notification tapped: ${notification.id}');
                   if (!notification.read) {
+                    print('🔔 [NotificationScreen] Marking as read: ${notification.id}');
                     controller.markAsRead([notification.id]);
                   }
-                  // นำทางไปหน้าที่เกี่ยวข้อง (ถ้ามี actionUrl)
+                  // นำทางไปหน้าที่เกี่ยวข้อง
                   if (notification.actionUrl != null) {
+                    print('🔔 [NotificationScreen] ActionUrl: ${notification.actionUrl}');
                     // TODO: นำทางตาม actionUrl
                   }
                 },
                 onDelete: () {
+                  print('🔔 [NotificationScreen] Deleting notification: ${notification.id}');
                   controller.deleteNotification(notification.id);
                 },
               );
@@ -153,6 +174,7 @@ class NotificationTile extends StatelessWidget {
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (direction) {
+        print('🔔 [NotificationTile] Dismissed notification: ${notification.id}');
         onDelete();
         Get.snackbar(
           'สำเร็จ',

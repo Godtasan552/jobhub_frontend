@@ -23,7 +23,7 @@ android {
     defaultConfig {
         applicationId = "com.example.form_validate"
         // ✅ เปลี่ยนเป็น 21 เพื่อรองรับ notifications
-        minSdk = 21  // ✅ ต้องเป็น 21 ขึ้นไป
+        minSdk = flutter.minSdkVersion  // ✅ ต้องเป็น 21 ขึ้นไป
         targetSdk = 36  
         versionCode = flutter.versionCode
         versionName = flutter.versionName
