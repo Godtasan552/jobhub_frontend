@@ -29,29 +29,31 @@ class ChatController {
 
     _socket!.connect();
 
+
     _socket!.onConnect((_) {
       isConnected.value = true;
-      print('✅ Socket connected');
+      print('================== Socket connected ==================');
       getConversations();
+      
     });
 
     _socket!.onDisconnect((_) {
       isConnected.value = false;
-      print('❌ Socket disconnected');
+      print('Socket disconnected');
     });
 
     _socket!.on('conversations', (data) {
-      print('📂 Conversations: $data');
+      print('Conversations: $data');
       onConversations?.call(List.from(data));
     });
 
     _socket!.on('messages', (data) {
-      print('📜 Messages: $data');
+      print('Messages: $data');
       onMessages?.call(List.from(data));
     });
 
     _socket!.on('message', (data) {
-      print('📩 New message: $data');
+      print('New message: $data');
       onMessage?.call(data);
     });
   }
@@ -59,10 +61,16 @@ class ChatController {
   void joinChat(String otherUserId) {
     _socket?.emit('joinChat', {'otherUserId': otherUserId});
     _socket?.emit('getMessages', {'otherUserId': otherUserId});
+    getConversations();
   }
 
   void sendMessage(String otherUserId, String message) {
     _socket?.emit('sendMessage', {'toUserId': otherUserId, 'message': message});
+    if (_socket != null && _socket!.connected){
+      _socket!.emit('sendMessage', {'toUserId': otherUserId, 'message': message});
+    } else {
+      print('Socket not connected, cannot send message');
+    }
   }
 
   void getConversations() {

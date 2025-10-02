@@ -38,6 +38,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> fetchUnreadCount() async {
     final token = storage.read('token');
+    print(token);
     if (token == null) return;
 
     try {
@@ -198,7 +199,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => ChatDetailPage(
-                        otherUserId: otherUser["id"] ?? "",
+                        otherUserId: otherUser["_id"] ?? "",
                         otherUserName:
                             "${otherUser["firstName"] ?? ""} ${otherUser["lastName"] ?? ""}",
                         chatController: _chatController,
