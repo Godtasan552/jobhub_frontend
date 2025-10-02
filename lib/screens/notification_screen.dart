@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../controllers/notification_controller.dart';
 import '../model/notification_model.dart';
 import 'package:intl/intl.dart';
+import 'notification_detail_screen.dart'; // ✅ เพิ่ม
 
 class NotificationScreen extends StatelessWidget {
   const NotificationScreen({Key? key}) : super(key: key);
@@ -13,7 +14,6 @@ class NotificationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final NotificationController controller = Get.find<NotificationController>();
 
-    // ✅ Log เมื่อเข้าหน้า
     print('🔔 [NotificationScreen] Opening notification screen');
     print('🔔 [NotificationScreen] Current notifications count: ${controller.notifications.length}');
     print('🔔 [NotificationScreen] Unread count: ${controller.unreadCount.value}');
@@ -91,15 +91,18 @@ class NotificationScreen extends StatelessWidget {
                 notification: notification,
                 onTap: () {
                   print('🔔 [NotificationScreen] Notification tapped: ${notification.id}');
+                  
+                  // ✅ Mark as read ถ้ายังไม่ได้อ่าน
                   if (!notification.read) {
                     print('🔔 [NotificationScreen] Marking as read: ${notification.id}');
                     controller.markAsRead([notification.id]);
                   }
-                  // นำทางไปหน้าที่เกี่ยวข้อง
-                  if (notification.actionUrl != null) {
-                    print('🔔 [NotificationScreen] ActionUrl: ${notification.actionUrl}');
-                    // TODO: นำทางตาม actionUrl
-                  }
+                  
+                  // ✅ เปิดหน้า Detail
+                  Get.to(
+                    () => NotificationDetailScreen(notification: notification),
+                    transition: Transition.rightToLeft,
+                  );
                 },
                 onDelete: () {
                   print('🔔 [NotificationScreen] Deleting notification: ${notification.id}');
@@ -114,6 +117,7 @@ class NotificationScreen extends StatelessWidget {
   }
 }
 
+// NotificationTile ไม่ต้องแก้ เหมือนเดิม
 class NotificationTile extends StatelessWidget {
   final NotificationModel notification;
   final VoidCallback onTap;
