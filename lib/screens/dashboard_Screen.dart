@@ -1,10 +1,7 @@
 // lib/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import '../services/job_service.dart';
-import '../services/auth_service.dart';
 import '../model/job_model.dart';
-import '../utils/navigation_helper.dart';
 import '../routes/app_routes.dart';
 import 'package:intl/intl.dart';
 
@@ -99,35 +96,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return type['value'];
   }
 
-  void _logout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('ออกจากระบบ'),
-        content: const Text('คุณต้องการออกจากระบบหรือไม่?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('ยกเลิก', style: TextStyle(color: Colors.grey[600])),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('ออกจากระบบ'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      await AuthService.logout();
-      NavigationHelper.offAllNamed('/login');
-    }
-  }
 
   Color _getStatusColor(String status) {
     switch (status) {
@@ -210,10 +178,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       automaticallyImplyLeading: false,
       flexibleSpace: FlexibleSpaceBar(
         title: const Text(
-          'ค้นหางาน',
+          'JobHub',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 20,
+            fontSize: 30,
+            color: Colors.white,
           ),
         ),
         background: Container(
@@ -226,16 +195,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.refresh, color: Colors.white),
-          onPressed: _loadJobs,
-        ),
-        IconButton(
-          icon: const Icon(Icons.logout, color: Colors.white),
-          onPressed: _logout,
-        ),
-      ],
+      
     );
   }
 
@@ -483,15 +443,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: _loadJobs,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('ลองใหม่'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
+                
               ],
             ),
           ),
@@ -641,40 +593,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF4CAF50).withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.account_balance_wallet,
-                              size: 20,
-                              color: Color(0xFF4CAF50),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'งบประมาณ',
-                                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                              ),
-                              Text(
-                                '฿${formatter.format(job.budget)}',
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF4CAF50),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                      
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
