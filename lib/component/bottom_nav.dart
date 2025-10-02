@@ -1,16 +1,13 @@
-// lib/component/bottom_nav.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../screens/dashboard_Screen.dart';
 import '../screens/create_job.dart';
 import '../screens/notification_screen.dart';
 import '../screens/profilePage.dart';
-import '../controllers/notification_controller.dart'; // ✅ เพิ่ม
+import '../controllers/notification_controller.dart';
 
 class BottomNav extends StatefulWidget {
-  final int initialIndex; // เพิ่มพารามิเตอร์นี้
-  
-  const BottomNav({super.key, this.initialIndex = 0});
+  const BottomNav({super.key});
 
   @override
   State<BottomNav> createState() => _BottomNavState();
@@ -18,15 +15,12 @@ class BottomNav extends StatefulWidget {
 
 class _BottomNavState extends State<BottomNav> {
   int _currentIndex = 0;
-  
-  // ✅ เรียกใช้ NotificationController
   final NotificationController notificationController = Get.find<NotificationController>();
 
-  // ✅ 5 หน้าเหมือนเดิม
   final List<Widget> _pages = [
     const DashboardScreen(),
     const CreateJobScreen(),
-    const Center(child: Text("Chat ยังไม่ทำ", style: TextStyle(fontSize: 18))),
+    const Center(child: Text("Chat ยังไม่ทำ")),
     const NotificationScreen(),
     const ProfilePage(),
   ];
@@ -34,75 +28,138 @@ class _BottomNavState extends State<BottomNav> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_currentIndex],
-      bottomNavigationBar: Obx(() {
-        return BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: Colors.blue,
-          unselectedItemColor: Colors.grey,
-          items: [
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: "Home",
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: _pages[_currentIndex],
+      ),
+      bottomNavigationBar: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            height: 65,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.search),
-              label: "Create Job",
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.chat),
-              label: "Chat",
-            ),
-            BottomNavigationBarItem(
-              icon: Stack(
-                clipBehavior: Clip.none,
+            child: Obx(() {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  const Icon(Icons.notifications),
-                  // ✅ Badge แสดงจำนวนแจ้งเตือนที่ยังไม่อ่าน
-                  if (notificationController.unreadCount.value > 0)
-                    Positioned(
-                      right: -6,
-                      top: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          notificationController.unreadCount.value > 9
-                              ? '9+'
-                              : notificationController.unreadCount.value.toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
+                  _buildNavItem(Icons.home_filled, "Home", 0),
+                  _buildNavItem(Icons.search_rounded, "Search", 1, isCenter: true),
+                  _buildNavItem(Icons.chat_bubble_outline, "Chat", 2),
+                  _buildNotificationItem(3),
+                  _buildNavItem(Icons.person_outline, "Profile", 4),
                 ],
+              );
+            }),
+          ),
+          // Floating center button
+          Positioned(
+            top: -20,
+            left: MediaQuery.of(context).size.width / 2 - 30,
+            child: GestureDetector(
+              onTap: () {
+                setState(() => _currentIndex = 1);
+              },
+              child: Container(
+                height: 60,
+                width: 60,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Colors.blueAccent, Colors.lightBlueAccent],
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blueAccent.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.add, color: Colors.white, size: 32),
               ),
-              label: "Notification",
             ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.person),
-              label: "Profile",
-            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index, {bool isCenter = false}) {
+    final selected = _currentIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _currentIndex = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? Colors.blueAccent.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: selected ? Colors.blueAccent : Colors.grey[500], size: isCenter ? 28 : 24),
+            if (!isCenter) SizedBox(height: 2),
+            if (!isCenter)
+              Text(label,
+                  style: TextStyle(
+                      color: selected ? Colors.blueAccent : Colors.grey[500],
+                      fontSize: 12,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400)),
           ],
-        );
-      }),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationItem(int index) {
+    final selected = _currentIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _currentIndex = index),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          _buildNavItem(Icons.notifications_none, "Notification", index),
+          if (notificationController.unreadCount.value > 0)
+            Positioned(
+              right: -2,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.redAccent.withOpacity(0.5),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  notificationController.unreadCount.value > 9
+                      ? '9+'
+                      : notificationController.unreadCount.value.toString(),
+                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
