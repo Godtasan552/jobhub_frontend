@@ -9,10 +9,10 @@ import '../screens/regis.dart';
 import '../screens/forget_pass.dart';
 import '../component/bottom_nav.dart';
 import '../screens/profilePage.dart';
-import '../screens/dashboard_Screen.dart'; // ✅ แก้ชื่อให้ตรง
+import '../screens/dashboard_Screen.dart';
 import '../screens/notification_screen.dart';
-
 import '../screens/wallet.dart';
+
 class AppPages {
   AppPages._();
 
@@ -49,7 +49,7 @@ class AppPages {
       transitionDuration: const Duration(milliseconds: 300),
     ),
 
-    // ✅ Dashboard Route - ใช้ BottomNav เป็นหน้าหลัก
+    // Dashboard Route - ใช้ BottomNav เป็นหน้าหลัก
     GetPage(
       name: AppRoutes.DASHBOARD,
       page: () => const BottomNav(),
@@ -64,39 +64,29 @@ class AppPages {
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),
+
+    // Notification Page
     GetPage(
       name: AppRoutes.NOTIFICATION,
       page: () => const NotificationScreen(),
-      name: AppRoutes.DASHBOARD,
-      page: () => const DashboardScreen(),  // ✅ เปลี่ยนชื่อ
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
-
     ),
+
+    // Wallet Page
     GetPage(
       name: AppRoutes.WALLET_PAGE,
-      page: () => const WalletPage(),  // เพิ่ม WalletPage
-      transition: Transition.rightToLeft,
+      page: () => const WalletPage(),
+      transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
     ),
 
-    // อนาคตสามารถเพิ่ม routes อื่นๆ ได้ที่นี่
-    /*
+    // Dashboard (แยกจาก BottomNav)
     GetPage(
       name: AppRoutes.HOME,
-      page: () => const HomeScreen(),
-      transition: Transition.zoom,
+      page: () => const DashboardScreen(),
+      transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
     ),
-    
-    GetPage(
-      name: AppRoutes.PROFILE,
-      page: () => const ProfileScreen(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-    ),
-
-    
-
   ];
 }
