@@ -100,7 +100,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
     try {
       final token = storage.read('token');
-
+      print("try 1 passed");
       if (token == null || token.isEmpty) {
         Get.snackbar(
           'Error',
@@ -109,6 +109,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           colorText: Colors.red[900],
           snackPosition: SnackPosition.TOP,
         );
+        setState(() {
+          _isLoading = false;
+        });
         return;
       }
 
@@ -121,65 +124,94 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           .where((e) => e.isNotEmpty)
           .toList();
 
+      Map<String, dynamic> requestBody = {
+        'title': _titleController.text.trim(),
+        'description': _descriptionController.text.trim(),
+        'type': _selectedType,
+        'category': _selectedCategory,
+        'budget': double.parse(_budgetController.text),
+        'duration': _durationController.text.trim(),
+        'requirements': requirements,
+        'attachments': [],
+        'deadline': _selectedDeadline!.toIso8601String(),
+      };
+
+      print('📤 Sending request body: ${json.encode(requestBody)}');
+
       final response = await http.post(
         Uri.parse('$baseUrl/api/v1/jobs'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: json.encode({
-          'title': _titleController.text.trim(),
-          'description': _descriptionController.text.trim(),
-          'type': _selectedType,
-          'category': _selectedCategory,
-          'budget': double.parse(_budgetController.text),
-          'duration': _durationController.text.trim(),
-          'deadline': _selectedDeadline?.toIso8601String(),
-          'requirements': requirements,
-          'attachments': [],
-        }),
+        body: json.encode(requestBody),
       );
 
-      final data = json.decode(response.body);
+      //print('📡 Response status: ${response.statusCode}');
+      //print('📡 Response body: ${response.body}');
 
-      if (response.statusCode == 201 && data['success'] == true) {
-        Get.snackbar(
+      final data = json.decode(response.body);
+      //ตรงนี้เพิ่ม print เพื่อตรวจสอบค่า data
+      //print('Parsed data: $data');
+      //print('success value: ${data['success']}');
+      //print('success type: ${data['success']}.runtimeType');
+      if (data['success'] == true) {
+        print('condition success == true passed');
+       // รีเซ็ตฟอร์ม
+        if (mounted) {
+          _formKey.currentState?.reset();
+          _titleController.clear();
+          _descriptionController.clear();
+          _budgetController.clear();
+          _durationController.clear();
+          _requirementsController.clear();
+          setState(() {
+            _selectedDeadline = null;
+            _selectedType = 'freelance';
+            _selectedCategory = 'technology';
+          });
+         Get.back();
+         Get.snackbar(
           'สำเร็จ',
-          'สร้างงานเรียบร้อยแล้ว',
+          data['message'] ?? 'สร้างงานเรียบร้อยแล้ว',
           backgroundColor: Colors.green[100],
           colorText: Colors.green[900],
           duration: const Duration(seconds: 2),
-        );
+          snackPosition: SnackPosition.TOP,
+        );}
+         
 
-        // รีเซ็ตฟอร์ม
-        _formKey.currentState!.reset();
-        _titleController.clear();
-        _descriptionController.clear();
-        _budgetController.clear();
-        _durationController.clear();
-        _requirementsController.clear();
-        setState(() {
-          _selectedDeadline = null;
-          _selectedType = 'freelance';
-          _selectedCategory = 'technology';
-        });
-
-        // กลับไปหน้า Dashboard
-        // หรือใช้ Get.back() ถ้าต้องการ
+        // กลับไปหน้า Dashboard หรือ Job List
       } else {
+        // แสดง error message จาก API
+        String errorMessage = data['message'] ?? 'ไม่สามารถสร้างงานได้';
+
+        // ตรวจสอบ validation errors แบบปลอดภัย
+        if (data['data']?['errors'] != null) {
+          List<dynamic> errors = data['data']!['errors'] as List<dynamic>;
+          if (errors.isNotEmpty) {
+            errorMessage = errors.map((e) => e['message']).join(', ');
+          }
+        }
+
         Get.snackbar(
           'Error',
-          data['message'] ?? 'ไม่สามารถสร้างงานได้',
+          errorMessage,
           backgroundColor: Colors.red[100],
           colorText: Colors.red[900],
+          snackPosition: SnackPosition.TOP,
+          duration: const Duration(seconds: 4),
         );
       }
     } catch (e) {
+      print('Error creating job snackbar bottom: $e');
       Get.snackbar(
         'Error',
         'เกิดข้อผิดพลาด: $e',
         backgroundColor: Colors.red[100],
-        colorText: Colors.red[900],
+        colorText: const Color.fromARGB(255, 241, 171, 19),
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 4),
       );
     } finally {
       setState(() {
@@ -191,10 +223,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('สร้างงานใหม่'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('สร้างงานใหม่'), elevation: 0),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -370,14 +399,16 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     InkWell(
                       onTap: _selectDeadline,
                       child: InputDecorator(
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'วันที่สิ้นสุดรับสมัคร',
-                          prefixIcon: Icon(Icons.calendar_today),
+                          prefixIcon: const Icon(Icons.calendar_today),
                         ),
                         child: Text(
                           _selectedDeadline == null
-                              ? 'เลือกวันที่'
-                              : DateFormat('dd/MM/yyyy').format(_selectedDeadline!),
+                              ? 'เลือกวันที่ บังคับ**'
+                              : DateFormat(
+                                  'dd/MM/yyyy',
+                                ).format(_selectedDeadline!),
                           style: TextStyle(
                             color: _selectedDeadline == null
                                 ? Colors.grey[600]
@@ -393,7 +424,8 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                       controller: _requirementsController,
                       decoration: const InputDecoration(
                         labelText: 'คุณสมบัติที่ต้องการ (ไม่บังคับ)',
-                        hintText: 'เช่น: React, Node.js, MongoDB (คั่นด้วยจุลภาค)',
+                        hintText:
+                            'เช่น: React, Node.js, MongoDB (คั่นด้วยจุลภาค)',
                         prefixIcon: Icon(Icons.checklist),
                       ),
                       maxLines: 3,

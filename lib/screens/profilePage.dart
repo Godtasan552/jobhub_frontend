@@ -702,6 +702,38 @@ class _ProfilePageState extends State<ProfilePage> {
                     title: 'กระเป๋าเงิน',
                     value: '${_userData?['wallet'] ?? 0} บาท',
                     color: Colors.green,
+                    trailing: InkWell(
+                      onTap: () {
+                        print('Pressed wallet');
+                        Get.toNamed('/wallet-page');
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'จัดการ',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green[700],
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              size: 14,
+                              color: Colors.green[700],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
 
@@ -796,6 +828,7 @@ class _ProfilePageState extends State<ProfilePage> {
     required String title,
     required String value,
     required Color color,
+    Widget? trailing,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -841,6 +874,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
           ),
+          if (trailing != null) trailing,
         ],
       ),
     );

@@ -1,3 +1,5 @@
+// lib/routes/app_pages.dart
+
 import 'package:get/get.dart';
 import 'app_routes.dart';
 
@@ -9,6 +11,9 @@ import '../component/bottom_nav.dart';
 import '../screens/job_detail.dart';
 import '../screens/profilePage.dart';
 import '../screens/dashboard_Screen.dart';
+import '../screens/notification_screen.dart';
+import '../screens/wallet.dart';
+
 class AppPages {
   AppPages._();
 
@@ -44,24 +49,29 @@ class AppPages {
       transition: Transition.cupertino,
       transitionDuration: const Duration(milliseconds: 300),
     ),
+
+    // Dashboard Route - ใช้ BottomNav เป็นหน้าหลัก
     GetPage(
       name: AppRoutes.DASHBOARD,
       page: () => const BottomNav(),
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
     ),
+
+    // Profile Page
     GetPage(
       name: AppRoutes.PROFILE,
       page: () => const ProfilePage(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),
+
+    // Notification Page
     GetPage(
-      name: AppRoutes.DASHBOARD,
-      page: () => const DashboardScreen(),  // ✅ เปลี่ยนชื่อ
+      name: AppRoutes.NOTIFICATION,
+      page: () => const NotificationScreen(),
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
-
     ),
 
     // Detail Page
@@ -74,19 +84,20 @@ class AppPages {
     ),
     // อนาคตสามารถเพิ่ม routes อื่นๆ ได้ที่นี่
     /*
+    // Wallet Page
+    GetPage(
+      name: AppRoutes.WALLET_PAGE,
+      page: () => const WalletPage(),
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+
+    // Dashboard (แยกจาก BottomNav)
     GetPage(
       name: AppRoutes.HOME,
-      page: () => const HomeScreen(),
-      transition: Transition.zoom,
+      page: () => const DashboardScreen(),
+      transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
     ),
-    
-    GetPage(
-      name: AppRoutes.PROFILE,
-      page: () => const ProfileScreen(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-    ),
-    */
   ];
 }
