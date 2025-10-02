@@ -5,16 +5,17 @@ import 'package:http/http.dart' as http;
 import '../model/notification_model.dart';
 
 class NotificationService {
-static final String baseUrl = dotenv.env['BASE_URL'] ?? '';
+  static final String baseUrl = dotenv.env['BASE_URL'] ?? '';
 
+  // ✅ แก้ไข: เพิ่ม /api/v1 ใน path
   static Future<List<NotificationModel>> getNotifications(String accessToken) async {
-    print('📡 [NotificationService] GET /notifications');
-    print('   URL: $baseUrl/notifications');
+    print('📡 [NotificationService] GET /api/v1/notifications');
+    print('   URL: $baseUrl/api/v1/notifications');
     print('   Token: ${accessToken.substring(0, 20)}...');
     
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/notifications'),
+        Uri.parse('$baseUrl/api/v1/notifications'), // ✅ แก้ไขตรงนี้
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
@@ -47,12 +48,13 @@ static final String baseUrl = dotenv.env['BASE_URL'] ?? '';
     }
   }
 
+  // ✅ แก้ไข: เพิ่ม /api/v1 ใน path
   static Future<int> getUnreadCount(String accessToken) async {
-    print('📡 [NotificationService] GET /notifications/unread-count');
+    print('📡 [NotificationService] GET /api/v1/notifications/unread-count');
     
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/notifications/unread-count'),
+        Uri.parse('$baseUrl/api/v1/notifications/unread-count'), // ✅ แก้ไขตรงนี้
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
@@ -76,13 +78,14 @@ static final String baseUrl = dotenv.env['BASE_URL'] ?? '';
     }
   }
 
+  // ✅ แก้ไข: เพิ่ม /api/v1 ใน path
   static Future<bool> markAsRead(String accessToken, List<String> notificationIds) async {
-    print('📡 [NotificationService] POST /notifications/mark-read');
+    print('📡 [NotificationService] POST /api/v1/notifications/mark-read');
     print('   IDs: $notificationIds');
     
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/notifications/mark-read'),
+        Uri.parse('$baseUrl/api/v1/notifications/mark-read'), // ✅ แก้ไขตรงนี้
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
@@ -102,12 +105,13 @@ static final String baseUrl = dotenv.env['BASE_URL'] ?? '';
     }
   }
 
+  // ✅ แก้ไข: เพิ่ม /api/v1 ใน path
   static Future<bool> deleteNotification(String accessToken, String notificationId) async {
-    print('📡 [NotificationService] DELETE /notifications/$notificationId');
+    print('📡 [NotificationService] DELETE /api/v1/notifications/$notificationId');
     
     try {
       final response = await http.delete(
-        Uri.parse('$baseUrl/notifications/$notificationId'),
+        Uri.parse('$baseUrl/api/v1/notifications/$notificationId'), // ✅ แก้ไขตรงนี้
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
