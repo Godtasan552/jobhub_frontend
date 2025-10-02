@@ -750,45 +750,62 @@ Widget _buildTransactionItem(Map<String, dynamic> transaction) {
   bool isIncome = false;
   String displayDescription = description;
   
-  // 1. เช็คจาก description สำหรับเติมเงิน/ถอนเงิน
+  // 1. เช็คจาก description (เติมเงิน/ถอนเงิน)
   final desc = description.toLowerCase();
-  if (desc.contains('เติมเงิน') || 
-      desc.contains('top-up') || 
-      desc.contains('wallet top-up') ||
+  if (desc.contains('wallet top-up') || 
+      desc.contains('เติมเงิน') || 
       desc.contains('deposit')) {
     isIncome = true;
-    displayDescription = 'เติมเงินเข้า (รายรับ)';
-  } else if (desc.contains('ถอนเงิน') || 
+    displayDescription = 'เติมเงินเข้า';
+  } else if (desc.contains('wallet withdrawal') ||
+             desc.contains('ถอนเงิน') || 
              desc.contains('withdraw')) {
     isIncome = false;
-    displayDescription = 'ถอนเงิน (รายจ่าย)';
+    displayDescription = 'ถอนเงิน';
   }
-  // 2. เช็คจาก from/to สำหรับโอนเงิน
-  else if (userId != null && userId.toString().isNotEmpty) {
-    if (to != null && to.toString() == userId.toString()) {
-      // เราเป็นผู้รับเงิน
-      isIncome = true;
-      displayDescription = 'ได้รับเงินโอนเข้า (รายรับ)';
-    } else if (from != null && from.toString() == userId.toString()) {
-      // เราเป็นผู้ส่งเงิน
-      isIncome = false;
-      displayDescription = 'โอนเงินออก (รายจ่าย)';
+  // 2. เช็คจาก from/to (โอนเงิน)
+  else if (from != null && to != null) {
+    final fromId = from is Map ? from['id'] : from.toString();
+    final toId = to is Map ? to['id'] : to.toString();
+    
+    if (userId != null) {
+      final userIdStr = userId.toString();
+      
+      if (toId == userIdStr) {
+        isIncome = true;
+        displayDescription = 'ได้รับเงินโอน';
+      } else if (fromId == userIdStr) {
+        isIncome = false;
+        displayDescription = 'โอนเงินออก';
+      } else {
+        // ถ้าไม่ใช่ทั้งผู้ส่งและผู้รับ (กรณีดูข้อมูลคนอื่น)
+        displayDescription = 'การโอนเงิน';
+      }
+    } else {
+      // ถ้า userId เป็น null ให้เช็คจาก type แทน
+      if (type == 'bonus') {
+        isIncome = true;
+        displayDescription = 'โบนัส/รับเงิน';
+      } else {
+        isIncome = false;
+        displayDescription = 'โอนเงิน';
+      }
     }
   }
   // 3. เช็คจาก type อื่นๆ
   else if (type == 'refund') {
     isIncome = true;
-    displayDescription = 'คืนเงิน (รายรับ)';
+    displayDescription = 'คืนเงิน';
   } else if (type == 'bonus') {
     isIncome = true;
-    displayDescription = 'โบนัส (รายรับ)';
+    displayDescription = 'โบนัส';
   } else if (type == 'job_payment') {
     isIncome = false;
-    displayDescription = 'จ่ายเงินค่างาน (รายจ่าย)';
+    displayDescription = 'จ่ายเงินค่างาน';
   }
   
   final color = isIncome ? Colors.green : Colors.red;
-
+  
   return Card(
     margin: const EdgeInsets.only(bottom: 12),
     elevation: 0,
@@ -835,5 +852,4 @@ Widget _buildTransactionItem(Map<String, dynamic> transaction) {
     ),
   );
 }
-
 }

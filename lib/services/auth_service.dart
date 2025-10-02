@@ -54,20 +54,24 @@ class AuthService {
       final accessToken = data['data']['tokens']['accessToken'];
       final refreshToken = data['data']['tokens']['refreshToken'];
       final user = data['data']['user'];
+      final userId = data['data']['user']['id'];
 
-      if (accessToken != null) {
+      if (accessToken != null && userId != null) {
         await _storage.write('token', accessToken);
         await _storage.write('refreshToken', refreshToken);
+        await _storage.write('userId', userId);
         await _storage.write('user', user);
         
-        print('✅ Token saved successfully');
-        print('👤 User: ${user['name']} (${user['email']})');
-        
+        print('Token saved successfully');
+        print('User: ${user['name']} (${user['email']})');
+        print('User ID: $userId');
         // ตรวจสอบว่าบันทึกสำเร็จ
         final savedToken = _storage.read('token');
-        print('📖 Token stored: ${savedToken != null ? "Yes" : "No"}');
+        final savedUserId = _storage.read('userId');
+        print('Token stored: ${savedToken != null ? "Yes" : "No"}');
+        print('UserId stored: ${savedUserId != null ? savedUserId : "No"}');
       } else {
-        print('❌ No accessToken in response');
+        print('No accessToken in response');
       }
     }
 
