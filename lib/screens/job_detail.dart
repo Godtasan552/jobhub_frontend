@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:get_storage/get_storage.dart';
 import '../component/bottom_nav.dart';
 import 'package:intl/intl.dart';
 import '../model/job_model.dart'; 
@@ -16,26 +18,47 @@ class job_detail extends StatefulWidget {
 class _job_detailState extends State<job_detail> with SingleTickerProviderStateMixin {
   JobModel? _job;
   bool _isDataLoaded = false;
+  bool _isWorkerApproved = false; // เพิ่มตัวแปรนี้
+  List<String> _userRoles = []; // เพิ่มตัวแปรนี้
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   
-  // ⚠️ เปลี่ยนเป็น Base URL ของ API Backend ของคุณ
-  static const String _baseUrl = 'http://your-backend-api.com/api/v1/jobs/';
+  final storage = GetStorage(); // เพิ่ม GetStorage
+  final String _baseUrl = dotenv.env['BASE_URL'] ?? 'http://localhost:5000';
 
-  // ----------------------------------------------------
-  // 🎯 TODO: ฟังก์ชันสำหรับดึง JWT Token
-  // ----------------------------------------------------
+  // ดึง Token และข้อมูล User
   Future<String?> _getAuthToken() async {
-    // แทนที่ด้วย logic การดึง JWT Token จาก SharedPreferences, GetStorage, หรือ Auth Provider
-    // หากไม่สามารถดึง Token ได้ ให้คืนค่า null 
-    // ตัวอย่าง: return GetStorage().read('jwt_token');
-
-    // ⛔️ ใช้ค่า dummy นี้ในการทดสอบเท่านั้น
-    // return 'YOUR_WORKER_JWT_TOKEN_HERE'; 
-    return null; // สมมติว่าคืนค่า null ถ้ายังไม่ได้จัดการ Auth
+    return storage.read('token');
   }
-  // ----------------------------------------------------
 
+  Future<void> _loadUserData() async {
+    final token = await _getAuthToken();
+    if (token == null) return;
+
+    try {
+      // เรียก API ดึงข้อมูล profile
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/v1/auth/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          setState(() {
+            _userRoles = List<String>.from(data['data']['role'] ?? []);
+            _isWorkerApproved = data['data']['isWorkerApproved'] ?? false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+    }
+  }
+  
   @override
   void initState() {
     super.initState();
@@ -46,6 +69,9 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
+    
+    // โหลดข้อมูล user
+    _loadUserData();
   }
 
   @override
@@ -78,26 +104,140 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
     }
   }
 
-  // --- Core Application Logic ---
-
-  Future<void> _applyJob(String jobId, String coverLetter, int proposedBudget) async {
-    final String url = '$_baseUrl$jobId/apply';
-    final String? token = await _getAuthToken();
-    
+  // แสดง Dialog สำหรับสมัครงาน
+  void _showApplyDialog() async {
+    // เช็คว่า login หรือยัง
+    final token = await _getAuthToken();
     if (token == null || token.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('กรุณาล็อกอินด้วยบัญชี Worker เพื่อสมัครงาน'), backgroundColor: Color(0xFFEF4444)),
+      Get.snackbar(
+        'กรุณาเข้าสู่ระบบ',
+        'คุณต้องเข้าสู่ระบบก่อนสมัครงาน',
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[900],
+        snackPosition: SnackPosition.TOP,
       );
       return;
     }
+
+    // เช็คว่ามี role worker หรือไม่
+    if (!_userRoles.contains('worker')) {
+      Get.snackbar(
+        'ไม่สามารถสมัครงานได้',
+        'คุณต้องสมัครเป็น Worker ก่อนจึงจะสามารถสมัครงานได้',
+        backgroundColor: Colors.orange[100],
+        colorText: Colors.orange[900],
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 4),
+      );
+      return;
+    }
+
+    // เช็คว่า worker ได้รับการอนุมัติหรือยัง
+    if (!_isWorkerApproved) {
+      Get.snackbar(
+        'รอการอนุมัติ',
+        'บัญชี Worker ของคุณยังไม่ได้รับการอนุมัติจาก Admin กรุณารอการอนุมัติ',
+        backgroundColor: Colors.orange[100],
+        colorText: Colors.orange[900],
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 4),
+      );
+      return;
+    }
+
+    // ถ้าผ่านทุก condition แล้ว แสดง dialog สมัครงาน
+    final coverLetterController = TextEditingController();
+    final budgetController = TextEditingController(
+      text: _job?.budget.toString() ?? '0',
+    );
+
+    Get.dialog(
+      AlertDialog(
+        title: const Text('สมัครงาน'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: coverLetterController,
+                decoration: const InputDecoration(
+                  labelText: 'จดหมายสมัครงาน *',
+                  hintText: 'เขียนเหตุผลที่คุณเหมาะสมกับงานนี้',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 5,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: budgetController,
+                decoration: const InputDecoration(
+                  labelText: 'งบประมาณที่เสนอ (บาท) *',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.attach_money),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('ยกเลิก'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final coverLetter = coverLetterController.text.trim();
+              final budgetStr = budgetController.text.trim();
+
+              if (coverLetter.isEmpty) {
+                Get.snackbar(
+                  'ข้อมูลไม่ครบ',
+                  'กรุณากรอกจดหมายสมัครงาน',
+                  backgroundColor: Colors.red[100],
+                  colorText: Colors.red[900],
+                );
+                return;
+              }
+
+              final budget = int.tryParse(budgetStr);
+              if (budget == null || budget <= 0) {
+                Get.snackbar(
+                  'ข้อมูลไม่ถูกต้อง',
+                  'กรุณากรอกงบประมาณที่ถูกต้อง',
+                  backgroundColor: Colors.red[100],
+                  colorText: Colors.red[900],
+                );
+                return;
+              }
+
+              Get.back(); // ปิด dialog
+              await _applyJob(_job!.id, coverLetter, budget);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFA3CFBB),
+            ),
+            child: const Text('ส่งใบสมัคร'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _applyJob(String jobId, String coverLetter, int proposedBudget) async {
+    final String endpoint = '/api/v1/jobs/';
+    final String url = '$_baseUrl$endpoint$jobId/apply';
+    final String? token = await _getAuthToken();
     
-    // 1. แสดง Loading SnackBar
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('กำลังส่งใบสมัคร...'), backgroundColor: Color(0xFFF59E0B)),
+    Get.snackbar(
+      'กำลังส่งใบสมัคร...',
+      'กรุณารอสักครู่',
+      backgroundColor: Colors.orange[100],
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 2),
     );
 
     try {
-      // 2. ส่ง Request HTTP POST
       final response = await http.post(
         Uri.parse(url),
         headers: {
@@ -110,37 +250,88 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
         }),
       );
 
+      print('Apply response status: ${response.statusCode}');
+      print('Apply response body: ${response.body}');
+
       final responseBody = jsonDecode(response.body);
 
-      // 3. จัดการ Response
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ สมัครงานสำเร็จ! นายจ้างจะได้รับแจ้งเตือน'),
-            backgroundColor: Color(0xFF10B981)
-          ),
-        );
-
-      } else if (response.statusCode == 403 && (responseBody['error'] == 'WORKER_NOT_APPROVED' || responseBody['message']?.contains('Worker is not approved') == true)) {
-         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ คุณยังไม่ได้รับการอนุมัติเป็น Worker'),
-            backgroundColor: Color(0xFFF59E0B)
-          ),
+        Get.snackbar(
+          'สำเร็จ!',
+          'ส่งใบสมัครงานเรียบร้อย นายจ้างจะได้รับแจ้งเตือน',
+          backgroundColor: Colors.green[100],
+          colorText: Colors.green[900],
+          snackPosition: SnackPosition.TOP,
+          duration: const Duration(seconds: 3),
         );
       } else {
         String message = responseBody['message'] ?? responseBody['error'] ?? 'เกิดข้อผิดพลาดในการสมัครงาน';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ $message'), backgroundColor: const Color(0xFFEF4444)),
+        Get.snackbar(
+          'ไม่สำเร็จ',
+          message,
+          backgroundColor: Colors.red[100],
+          colorText: Colors.red[900],
+          snackPosition: SnackPosition.TOP,
+          duration: const Duration(seconds: 3),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ ข้อผิดพลาดในการเชื่อมต่อ: ${e.toString()}'), backgroundColor: const Color(0xFFEF4444)),
+      print('Error applying job: $e');
+      Get.snackbar(
+        'เกิดข้อผิดพลาด',
+        'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[900],
+        snackPosition: SnackPosition.TOP,
       );
     }
   }
 
+  // ปุ่มสมัครงาน (ใส่ใน build method)
+  Widget _buildApplyButton() {
+    return Container(
+      width: double.infinity,
+      height: 54,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFA3CFBB), Color(0xFF8BC0A8)],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFA3CFBB).withOpacity(0.4),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: _showApplyDialog,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.send_rounded, size: 22),
+            SizedBox(width: 10),
+            Text(
+              'สมัครงาน',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   // ----------------------------------------------------
   // ฟังก์ชันสำหรับแสดง Modal Form
   // ----------------------------------------------------
