@@ -1,14 +1,7 @@
-
-import 'package:flutter/material.dart';
-import 'package:form_validate/screens/create_job.dart';
-import 'package:form_validate/screens/dashboard_Screen.dart';
-import 'package:get/get.dart';
-import 'package:form_validate/screens/profilePage.dart';
 // lib/component/bottom_nav.dart
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../screens/dashboard_screen.dart';
+import '../screens/dashboard_Screen.dart';
 import '../screens/create_job.dart';
 import '../screens/notification_screen.dart';
 import '../screens/profilePage.dart';

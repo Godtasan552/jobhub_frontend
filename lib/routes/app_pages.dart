@@ -83,7 +83,7 @@ class AppPages {
         
     ),
     // อนาคตสามารถเพิ่ม routes อื่นๆ ได้ที่นี่
-    /*
+    
     // Wallet Page
     GetPage(
       name: AppRoutes.WALLET_PAGE,
@@ -92,12 +92,12 @@ class AppPages {
       transitionDuration: const Duration(milliseconds: 300),
     ),
 
-    // Dashboard (แยกจาก BottomNav)
-    GetPage(
-      name: AppRoutes.HOME,
-      page: () => const DashboardScreen(),
-      transition: Transition.fadeIn,
-      transitionDuration: const Duration(milliseconds: 300),
-    ),
+    // // Dashboard (แยกจาก BottomNav)
+    // GetPage(
+    //   name: AppRoutes.HOME,
+    //   page: () => const DashboardScreen(),
+    //   transition: Transition.fadeIn,
+    //   transitionDuration: const Duration(milliseconds: 300),
+    // ),
   ];
 }

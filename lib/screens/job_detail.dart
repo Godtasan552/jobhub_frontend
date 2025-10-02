@@ -403,76 +403,120 @@ class _job_detailState extends State<job_detail> with SingleTickerProviderStateM
   }
 
   @override
-  Widget build(BuildContext context) {
-    if (_job == null) {
-      return Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF3B82F6), Color(0xFF1E3A8A)],
-            ),
-          ),
-          child: const Center(
-            child: CircularProgressIndicator(color: Colors.white),
-          ),
-        ),
-      );
-    }
-    
-    final job = _job!;
-    final formatter = NumberFormat('#,##0');
-    final dateFormatter = DateFormat('dd MMM yyyy, HH:mm');
-
+Widget build(BuildContext context) {
+  if (_job == null) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: Text(
-          job.title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF3B82F6), Color(0xFF1E3A8A)],
+          ),
         ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: Colors.white,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF3B82F6), Color(0xFF1E3A8A)],
-            ),
+        child: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  final job = _job!;
+  final formatter = NumberFormat('#,##0');
+  final dateFormatter = DateFormat('dd MMM yyyy, HH:mm');
+  final notificationController = Get.find();
+
+  return Scaffold(
+    extendBodyBehindAppBar: true,
+    appBar: AppBar(
+      title: Text(job.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      foregroundColor: Colors.white,
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF3B82F6), Color(0xFF1E3A8A)],
           ),
         ),
       ),
-        bottomNavigationBar: buildBottomNavigationBar(
-      0, // highlight แท็บ Home
-      (index) {
-        switch (index) {
-          case 0:
-            Get.back();
-            break;
-          default:
-            // ⚠️ ปรับแก้ตาม navigation logic ของคุณ
-            Get.off(() => BottomNav(initialIndex: index)); 
-            break;
-        }
-      },
     ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFF3B82F6).withOpacity(0.05),
-                Colors.white,
+
+    // ✅ ใส่ BottomNavigationBar ตรง ๆ
+    bottomNavigationBar: Obx(() {
+      return BottomNavigationBar(
+        currentIndex: 0, // แท็บ Home
+        onTap: (index) {
+          switch (index) {
+            case 0:
+              Get.back(); // กลับหน้าก่อนหน้า
+              break;
+            default:
+              Get.off(() => BottomNav(initialIndex: index));
+              break;
+          }
+        },
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        items: [
+          const BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          const BottomNavigationBarItem(icon: Icon(Icons.search), label: "Create Job"),
+          const BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Chat"),
+          BottomNavigationBarItem(
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.notifications),
+                if (notificationController.unreadCount.value > 0)
+                  Positioned(
+                    right: -6,
+                    top: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Text(
+                        notificationController.unreadCount.value > 9
+                            ? '9+'
+                            : notificationController.unreadCount.value.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
               ],
-              stops: const [0.0, 0.3],
             ),
+            label: "Notification",
           ),
+          const BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
+        ],
+      );
+    }),
+
+    body: FadeTransition(
+      opacity: _fadeAnimation,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF3B82F6).withOpacity(0.05),
+              Colors.white,
+            ],
+            stops: const [0.0, 0.3],
+          ),
+        ),
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 100, 16, 16),
             child: Column(
