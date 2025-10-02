@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../model/job_model.dart';
 import 'package:get/get.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '/services/job_service.dart';
+import '../services/auth_service.dart';
 
 class job_detail extends StatefulWidget {
   const job_detail({super.key});
@@ -25,18 +26,12 @@ class _job_detailState extends State<job_detail>
   static const Color secondaryColor = Color(0xFF4C956C);
   static const Color backgroundColor = Color(0xFFF8FAF9);
 
-  static const String _baseUrl = 'http://your-backend-api.com/api/v1/jobs/';
-
   final Map<String, Color> jobTypeColors = {
     'freelance': const Color(0xFF3B82F6),
     'part-time': const Color(0xFF10B981),
     'contract': const Color(0xFFF59E0B),
     'full-time': const Color(0xFFEF4444),
   };
-
-  Future<String?> _getAuthToken() async {
-    return null;
-  }
 
   @override
   void initState() {
@@ -85,48 +80,37 @@ class _job_detailState extends State<job_detail>
     String coverLetter,
     int proposedBudget,
   ) async {
-    final String url = '$_baseUrl$jobId/apply';
-    final String? token = await _getAuthToken();
-
-    if (token == null || token.isEmpty) {
-      if (!mounted) return;
-      _showSnackBar(
-        'กรุณาล็อกอินด้วยบัญชี Worker เพื่อสมัครงาน',
-        isError: true,
-      );
-      return;
-    }
-
     if (!mounted) return;
     _showSnackBar('กำลังส่งใบสมัคร...', isLoading: true);
 
-    try {
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'coverLetter': coverLetter,
-          'proposedBudget': proposedBudget,
-        }),
-      );
+    final result = await JobService.applyJob(
+      jobId: jobId,
+      coverLetter: coverLetter,
+      proposedBudget: proposedBudget,
+    );
 
-      if (!mounted) return;
-      final responseBody = jsonDecode(response.body);
+    if (!mounted) return;
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        _showSnackBar('สมัครงานสำเร็จ!', isSuccess: true);
-      } else if (response.statusCode == 403) {
+    if (result['success'] == true) {
+      _showSnackBar('สมัครงานสำเร็จ!', isSuccess: true);
+      // Refresh job data to update applicants count
+      _refreshJobData(jobId);
+    } else {
+      final statusCode = result['statusCode'];
+      if (statusCode == 403) {
         _showSnackBar('คุณยังไม่ได้รับการอนุมัติเป็น Worker', isWarning: true);
       } else {
-        String message = responseBody['message'] ?? 'เกิดข้อผิดพลาด';
-        _showSnackBar(message, isError: true);
+        _showSnackBar(result['message'], isError: true);
       }
-    } catch (e) {
-      if (!mounted) return;
-      _showSnackBar('ข้อผิดพลาดในการเชื่อมต่อ', isError: true);
+    }
+  }
+
+  Future<void> _refreshJobData(String jobId) async {
+    final result = await JobService.getJobById(jobId);
+    if (result['success'] == true && mounted) {
+      setState(() {
+        _job = result['job'];
+      });
     }
   }
 
@@ -149,13 +133,26 @@ class _job_detailState extends State<job_detail>
     } else if (isWarning) {
       bgColor = const Color(0xFFFF9800);
       icon = Icons.warning;
+    } else if (isLoading) {
+      bgColor = secondaryColor;
+      icon = Icons.hourglass_empty;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            Icon(icon, color: Colors.white),
+            if (isLoading)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            else
+              Icon(icon, color: Colors.white),
             const SizedBox(width: 12),
             Expanded(child: Text(message)),
           ],
@@ -163,6 +160,7 @@ class _job_detailState extends State<job_detail>
         backgroundColor: bgColor,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: Duration(seconds: isLoading ? 10 : 3),
       ),
     );
   }
@@ -326,9 +324,11 @@ class _job_detailState extends State<job_detail>
                                 _job!.budget.toInt();
 
                             if (coverLetter.isEmpty) {
-                              _showSnackBar(
-                                'กรุณากรอกจดหมายปะหน้า',
-                                isError: true,
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('กรุณากรอกจดหมายปะหน้า'),
+                                  backgroundColor: const Color(0xFFF44336),
+                                ),
                               );
                               return;
                             }
@@ -673,13 +673,7 @@ class _job_detailState extends State<job_detail>
                               const SizedBox(height: 16),
                               Row(
                                 children: [
-                                  Expanded(
-                                    child: _buildInfoItem(
-                                      Icons.access_time,
-                                      'ระยะเวลา',
-                                      job.duration,
-                                    ),
-                                  ),
+                                  
                                   Container(
                                     width: 1,
                                     height: 40,
