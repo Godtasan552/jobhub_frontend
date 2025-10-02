@@ -757,34 +757,34 @@ Widget _buildTransactionItem(Map<String, dynamic> transaction) {
       desc.contains('wallet top-up') ||
       desc.contains('deposit')) {
     isIncome = true;
-    displayDescription = 'เติมเงินเข้ากระเป๋า';
+    displayDescription = 'เติมเงินเข้า (รายรับ)';
   } else if (desc.contains('ถอนเงิน') || 
              desc.contains('withdraw')) {
     isIncome = false;
-    displayDescription = 'ถอนเงินออกจากกระเป๋า';
+    displayDescription = 'ถอนเงิน (รายจ่าย)';
   }
   // 2. เช็คจาก from/to สำหรับโอนเงิน
   else if (userId != null && userId.toString().isNotEmpty) {
     if (to != null && to.toString() == userId.toString()) {
       // เราเป็นผู้รับเงิน
       isIncome = true;
-      displayDescription = 'รับเงินโอน: ${description}';
+      displayDescription = 'ได้รับเงินโอนเข้า (รายรับ)';
     } else if (from != null && from.toString() == userId.toString()) {
       // เราเป็นผู้ส่งเงิน
       isIncome = false;
-      displayDescription = 'โอนเงินออก: ${description}';
+      displayDescription = 'โอนเงินออก (รายจ่าย)';
     }
   }
-  // 3. เช็คจาก type
+  // 3. เช็คจาก type อื่นๆ
   else if (type == 'refund') {
     isIncome = true;
-    displayDescription = 'คืนเงิน: ${description}';
+    displayDescription = 'คืนเงิน (รายรับ)';
   } else if (type == 'bonus') {
     isIncome = true;
-    displayDescription = 'โบนัส: ${description}';
+    displayDescription = 'โบนัส (รายรับ)';
   } else if (type == 'job_payment') {
     isIncome = false;
-    displayDescription = 'จ่ายเงินค่างาน: ${description}';
+    displayDescription = 'จ่ายเงินค่างาน (รายจ่าย)';
   }
   
   final color = isIncome ? Colors.green : Colors.red;
@@ -835,4 +835,5 @@ Widget _buildTransactionItem(Map<String, dynamic> transaction) {
     ),
   );
 }
+
 }
