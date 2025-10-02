@@ -1,5 +1,7 @@
 // lib/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
+import 'package:form_validate/screens/job_detail.dart';
+import 'package:get/get.dart';
 import '../services/job_service.dart';
 import '../model/job_model.dart';
 import '../routes/app_routes.dart';

@@ -1,15 +1,16 @@
 // lib/component/bottom_nav.dart
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../screens/dashboard_screen.dart';
+import '../screens/dashboard_Screen.dart';
 import '../screens/create_job.dart';
 import '../screens/notification_screen.dart';
 import '../screens/profilePage.dart';
 import '../controllers/notification_controller.dart'; // ✅ เพิ่ม
 
 class BottomNav extends StatefulWidget {
-  const BottomNav({super.key});
+  final int initialIndex; // เพิ่มพารามิเตอร์นี้
+  
+  const BottomNav({super.key, this.initialIndex = 0});
 
   @override
   State<BottomNav> createState() => _BottomNavState();
