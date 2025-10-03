@@ -310,6 +310,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   
   List messages = [];
   bool isLoading = true;
+  String? errorMessage;
   final TextEditingController messageController = TextEditingController();
   final ScrollController scrollController = ScrollController();
 
@@ -322,67 +323,90 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _initChat();
   }
 
-void _initChat() {
-  print('🔄 Initializing chat detail...');
-  
-  // ตรวจสอบ userId
-  final userId = storage.read('userId');
-  print('🔑 My userId: $userId');
-  
-  if (userId == null) {
-    print('❌ userId is null!');
+  void _initChat() {
+    print('🔄 Initializing chat detail...');
     
-    // แสดง error หลัง build เสร็จ
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        // กลับไปหน้าก่อนหน้า
-        Navigator.pop(context);
-      }
-    });
+    // ตรวจสอบ userId
+    final userId = storage.read('userId');
+    print('🔑 My userId: $userId');
     
-    setState(() => isLoading = false);
-    return;
-  }
-
-  // Setup callbacks
-  chatController.onMessages = (data) {
-    print('✅ Messages callback: ${data.length} items');
-    if (mounted) {
+    if (userId == null) {
+      print('❌ userId is null!');
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          Navigator.pop(context);
+        }
+      });
+      
       setState(() {
-        messages = data;
         isLoading = false;
+        errorMessage = 'ไม่พบข้อมูลผู้ใช้';
       });
-      _scrollToBottom();
+      return;
     }
-  };
 
-  chatController.onMessage = (data) {
-    print('📨 New message callback');
-    print('Data: $data');
+    // Setup callbacks
+    chatController.onMessages = (data) {
+      print('✅ Messages callback: ${data.length} items');
+      
+      if (mounted) {
+        setState(() {
+          // เรียงข้อความจากเก่าไปใหม่ (เก่าสุดอยู่บน ใหม่สุดอยู่ล่าง)
+          messages = List.from(data);
+          
+          // ถ้า API ส่งมาเรียงจากใหม่ไปเก่า ให้ reverse
+          if (messages.isNotEmpty) {
+            // ตรวจสอบว่าข้อความแรกใหม่กว่าข้อความสุดท้ายหรือไม่
+            try {
+              final firstDate = DateTime.parse(messages.first['createdAt']);
+              final lastDate = DateTime.parse(messages.last['createdAt']);
+              
+              if (firstDate.isAfter(lastDate)) {
+                print('🔄 Reversing messages order (newest first -> oldest first)');
+                messages = messages.reversed.toList();
+              }
+            } catch (e) {
+              print('⚠️ Cannot sort messages: $e');
+            }
+          }
+          
+          isLoading = false;
+          
+          print('✅ Messages sorted: ${messages.length} items');
+        });
+        _scrollToBottom();
+      }
+    };
+
+    chatController.onMessage = (data) {
+      print('📨 New message callback');
+      print('Data: $data');
+      
+      if (mounted) {
+        setState(() {
+          // เพิ่มข้อความใหม่ที่ท้ายสุด
+          messages.add(data);
+        });
+        _scrollToBottom();
+      }
+    };
+
+    // Join chat via socket
+    chatController.joinChat(widget.otherUserId);
     
-    if (mounted) {
-      setState(() {
-        messages.add(data);
-      });
-      _scrollToBottom();
-    }
-  };
-
-  // Join chat via socket
-  chatController.joinChat(widget.otherUserId);
-  
-  // Load messages via HTTP
-  _loadMessages();
-  
-  // Mark as read
-  chatController.markAsRead(widget.otherUserId);
-}
+    // Load messages via HTTP
+    _loadMessages();
+    
+    // Mark as read
+    chatController.markAsRead(widget.otherUserId);
+  }
 
   Future<void> _loadMessages() async {
     print('💬 Loading messages...');
@@ -391,10 +415,10 @@ void _initChat() {
     } catch (e) {
       print('❌ Error loading messages: $e');
       if (mounted) {
-        setState(() => isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
-        );
+        setState(() {
+          isLoading = false;
+          errorMessage = 'เกิดข้อผิดพลาดในการโหลดข้อความ';
+        });
       }
     }
   }
@@ -436,9 +460,10 @@ void _initChat() {
 
   @override
   Widget build(BuildContext context) {
-    final userId = storage.read('userId');
+    final userId = storage.read('userId')?.toString();
     
     print('🎨 Building ChatDetailPage');
+    print('🎨 My userId: $userId');
     print('🎨 isLoading: $isLoading, messages: ${messages.length}');
 
     return Scaffold(
@@ -470,186 +495,220 @@ void _initChat() {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Color(0xFFA3CFBB)
+      body: errorMessage != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.black87,
                       ),
                     ),
-                  )
-                : messages.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.chat_outlined,
-                              size: 64,
-                              color: Colors.grey[400]
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              "ยังไม่มีข้อความ",
-                              style: TextStyle(color: Colors.grey[600]),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              "เริ่มต้นการสนทนาได้เลย",
-                              style: TextStyle(
-                                color: Colors.grey[400],
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: scrollController,
-                        padding: const EdgeInsets.all(16),
-                        itemCount: messages.length,
-                        itemBuilder: (context, index) {
-                          final msg = messages[index];
-                          
-                          // ตรวจสอบ fromUserId หลายรูปแบบ
-                          String? fromUserId;
-                          if (msg["fromUserId"] is Map) {
-                            fromUserId = msg["fromUserId"]["id"]?.toString() ?? 
-                                        msg["fromUserId"]["_id"]?.toString();
-                          } else {
-                            fromUserId = msg["fromUserId"]?.toString();
-                          }
-                          
-                          // ตรวจสอบ isFromMe
-                          final isFromMe = msg["isFromMe"] ?? 
-                                          (fromUserId != null && fromUserId == userId);
-
-                          print('💬 Message $index: isFromMe=$isFromMe, fromUserId=$fromUserId, myUserId=$userId');
-
-                          return Align(
-                            alignment: isFromMe
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              constraints: BoxConstraints(
-                                maxWidth:
-                                    MediaQuery.of(context).size.width * 0.7,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isFromMe
-                                    ? const Color(0xFFA3CFBB)
-                                    : Colors.white,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: const Radius.circular(16),
-                                  topRight: const Radius.circular(16),
-                                  bottomLeft:
-                                      Radius.circular(isFromMe ? 16 : 4),
-                                  bottomRight:
-                                      Radius.circular(isFromMe ? 4 : 16),
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 5,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    msg["message"] ?? "",
-                                    style: TextStyle(
-                                      color: isFromMe
-                                          ? Colors.white
-                                          : Colors.black87,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                  if (msg["createdAt"] != null) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      DateFormat('HH:mm').format(
-                                        DateTime.parse(msg["createdAt"]),
-                                      ),
-                                      style: TextStyle(
-                                        color: isFromMe
-                                            ? Colors.white70
-                                            : Colors.grey[500],
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          );
-                        },
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFA3CFBB),
                       ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -2),
+                      child: const Text('กลับ'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Row(
+              ),
+            )
+          : Column(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: messageController,
-                    decoration: InputDecoration(
-                      hintText: "พิมพ์ข้อความ...",
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                    ),
-                    maxLines: null,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendMessage(),
-                  ),
+                  child: isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Color(0xFFA3CFBB)
+                            ),
+                          ),
+                        )
+                      : messages.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.chat_outlined,
+                                    size: 64,
+                                    color: Colors.grey[400]
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    "ยังไม่มีข้อความ",
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    "เริ่มต้นการสนทนาได้เลย",
+                                    style: TextStyle(
+                                      color: Colors.grey[400],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              controller: scrollController,
+                              padding: const EdgeInsets.all(16),
+                              itemCount: messages.length,
+                              itemBuilder: (context, index) {
+                                final msg = messages[index];
+                                
+                                // ดึง fromUserId จากข้อความ
+                                String? fromUserId;
+                                if (msg["fromUserId"] is Map) {
+                                  fromUserId = msg["fromUserId"]["_id"]?.toString() ?? 
+                                              msg["fromUserId"]["id"]?.toString();
+                                } else {
+                                  fromUserId = msg["fromUserId"]?.toString();
+                                }
+                                
+                                // ตรวจสอบว่าเป็นข้อความจากเราหรือไม่
+                                final isFromMe = fromUserId == userId;
+                                
+                                print('💬 Message $index: isFromMe=$isFromMe, fromUserId=$fromUserId, myUserId=$userId');
+
+                                return Align(
+                                  alignment: isFromMe
+                                      ? Alignment.centerRight  // ข้อความของเรา - ขวา
+                                      : Alignment.centerLeft,  // ข้อความคนอื่น - ซ้าย
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    constraints: BoxConstraints(
+                                      maxWidth:
+                                          MediaQuery.of(context).size.width * 0.7,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 10,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isFromMe
+                                          ? const Color(0xFFA3CFBB)  // สีเขียว - ข้อความของเรา
+                                          : Colors.white,             // สีขาว - ข้อความคนอื่น
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: const Radius.circular(16),
+                                        topRight: const Radius.circular(16),
+                                        bottomLeft:
+                                            Radius.circular(isFromMe ? 16 : 4),
+                                        bottomRight:
+                                            Radius.circular(isFromMe ? 4 : 16),
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.05),
+                                          blurRadius: 5,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          msg["message"] ?? "",
+                                          style: TextStyle(
+                                            color: isFromMe
+                                                ? Colors.white
+                                                : Colors.black87,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                        if (msg["createdAt"] != null) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            DateFormat('HH:mm').format(
+                                              DateTime.parse(msg["createdAt"]),
+                                            ),
+                                            style: TextStyle(
+                                              color: isFromMe
+                                                  ? Colors.white70
+                                                  : Colors.grey[500],
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                 ),
-                const SizedBox(width: 8),
                 Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFFA3CFBB), Color(0xFF8BC0A8)],
-                    ),
-                    shape: BoxShape.circle,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
                   ),
-                  child: IconButton(
-                    icon: const Icon(Icons.send, color: Colors.white),
-                    onPressed: _sendMessage,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: messageController,
+                          decoration: InputDecoration(
+                            hintText: "พิมพ์ข้อความ...",
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                          ),
+                          maxLines: null,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _sendMessage(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFFA3CFBB), Color(0xFF8BC0A8)],
+                          ),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.send, color: Colors.white),
+                          onPressed: _sendMessage,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }
