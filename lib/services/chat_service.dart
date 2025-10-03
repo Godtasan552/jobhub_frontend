@@ -7,7 +7,38 @@ class ChatService {
   
   ChatService(this._dio);
 
-  // ใช้ REST API สำหรับดึงข้อมูล
+  // ฟังก์ชันส่งข้อความผ่าน HTTP
+  Future<Map<String, dynamic>> sendMessage(String toUserId, String message) async {
+    try {
+      print('📤 HTTP: Sending message to $toUserId');
+      
+      final token = storage.read('token');
+      final response = await _dio.post(
+        '/api/v1/chat/send',
+        data: {
+          'toUserId': toUserId,
+          'message': message,
+          'messageType': 'text',
+        },
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'}
+        ),
+      );
+
+      print('✅ HTTP: Message sent successfully');
+      
+      // ดึงข้อมูลข้อความจาก response
+      final data = response.data['data'];
+      
+      return data is Map<String, dynamic> ? data : {'message': message};
+      
+    } catch (e) {
+      print('❌ HTTP Error sending message: $e');
+      rethrow;
+    }
+  }
+
+  // ดึง conversations
   Future<List<dynamic>> getConversations() async {
     try {
       print('📋 HTTP: Getting conversations');
@@ -30,6 +61,7 @@ class ChatService {
     }
   }
 
+  // ดึง messages
   Future<List<dynamic>> getMessages(String otherUserId) async {
     try {
       print('💬 HTTP: Getting messages with $otherUserId');
@@ -52,6 +84,7 @@ class ChatService {
     }
   }
 
+  // ดึง unread count
   Future<int> getUnreadCount() async {
     try {
       final token = storage.read('token');
@@ -70,31 +103,31 @@ class ChatService {
     }
   }
 
-Future<void> markAsRead(String otherUserId, List<String> messageIds) async {
-  try {
-    if (messageIds.isEmpty) {
-      print('⚠️ No messages to mark as read');
-      return;
+  // Mark as read
+  Future<void> markAsRead(String otherUserId, List<String> messageIds) async {
+    try {
+      if (messageIds.isEmpty) {
+        print('⚠️ No messages to mark as read');
+        return;
+      }
+      
+      print('✅ Marking ${messageIds.length} messages as read');
+      
+      final token = storage.read('token');
+      await _dio.post(
+        '/api/v1/chat/mark-read',
+        data: {
+          'messageIds': messageIds,
+        },
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'}
+        ),
+      );
+      
+      print('✅ Messages marked as read successfully');
+      
+    } catch (e) {
+      print('❌ Error marking as read: $e');
     }
-    
-    print('✅ Marking ${messageIds.length} messages as read');
-    
-    final token = storage.read('token');
-    await _dio.post(
-      '/api/v1/chat/mark-read',
-      data: {
-        'messageIds': messageIds,  // ส่ง messageIds ตามที่ backend ต้องการ
-      },
-      options: Options(
-        headers: {'Authorization': 'Bearer $token'}
-      ),
-    );
-    
-    print('✅ Messages marked as read successfully');
-    
-  } catch (e) {
-    print('❌ Error marking as read: $e');
-    // ไม่ throw เพราะไม่ใช่ฟีเจอร์หลัก
   }
-}
 }

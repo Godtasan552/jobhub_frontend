@@ -29,6 +29,10 @@ class ChatController extends GetxController {
 
   static final String baseUrl = dotenv.env['BASE_URL'] ?? '';
 
+  // เพิ่มฟังก์ชันนี้ลงไปใน ChatController class
+
+// ส่งข้อความผ่าน HTTP API
+
   void _initializeServices() {
     print('🔧 Initializing services...');
     _dio = Dio();
@@ -59,104 +63,136 @@ class ChatController extends GetxController {
     print('✅ Services initialized');
   }
 
-  void connect(String token) {
-    print('');
-    print('🔌 ========== CONNECT START ==========');
-    
-    if (_socket != null && _socket!.connected) {
-      print('⚠️ Socket already connected');
-      print('🔌 ===================================');
-      return;
-    }
-
-    print('🌐 Connecting to: $baseUrl');
-    print('🔑 Token: ${token.substring(0, 20)}...');
-
-    _socket = IO.io(
-      baseUrl,
-      IO.OptionBuilder()
-          .setTransports(['websocket'])
-          .disableAutoConnect()
-          .setAuth({'token': token})
-          .build(),
-    );
-
-    print('📝 Setting up Socket event listeners...');
-
-    // Connect listener
-    _socket!.onConnect((_) {
-      print('');
-      print('✅ Socket connected');
-      isConnected.value = true;
-      print('');
-    });
-
-    _socket!.onDisconnect((_) {
-      print('');
-      print('❌ Socket disconnected');
-      isConnected.value = false;
-      print('');
-    });
-
-    _socket!.onConnectError((data) {
-      print('❌ Connection Error: $data');
-    });
-
-    _socket!.onError((data) {
-      print('❌ Socket Error: $data');
-    });
-
-    // Listen for real-time messages
-    _socket!.on('receive_message', (data) {
-      print('');
-      print('📨 ========== NEW MESSAGE VIA SOCKET ==========');
-      print('📨 Data: $data');
-      
-      if (onMessage != null) {
-        print('✅ Calling onMessage callback');
-        onMessage!(data);
-      } else {
-        print('⚠️ onMessage callback is null');
-      }
-      print('📨 ==============================================');
-      print('');
-    });
-
-    // Listen for message sent confirmation
-    _socket!.on('message_sent', (data) {
-      print('');
-      print('✅ Message sent confirmed');
-      print('Data: $data');
-      
-      if (onMessage != null) {
-        onMessage!(data);
-      }
-      print('');
-    });
-
-    // Listen for messages read
-    _socket!.on('messages_read', (data) {
-      print('✅ Messages marked as read: $data');
-    });
-
-    // Listen for typing
-    _socket!.on('user_typing', (data) {
-      print('⌨️ User typing: $data');
-    });
-
-    // Listen for user joined
-    _socket!.on('room_joined', (data) {
-      print('✅ Room joined: $data');
-    });
-
-    print('✅ Socket listeners set up');
-    print('🔌 Calling socket.connect()...');
-    
-    _socket!.connect();
-    
+void connect(String token) {
+  print('');
+  print('🔌 ========== CONNECT START ==========');
+  
+  if (_socket != null && _socket!.connected) {
+    print('⚠️ Socket already connected');
     print('🔌 ===================================');
-    print('');
+    return;
   }
+
+  print('🌐 Connecting to: $baseUrl');
+  print('🔑 Token: ${token.substring(0, 20)}...');
+
+  _socket = IO.io(
+    baseUrl,
+    IO.OptionBuilder()
+        .setTransports(['websocket'])
+        .disableAutoConnect()
+        .setAuth({'token': token})
+        .build(),
+  );
+
+  print('📝 Setting up Socket event listeners...');
+
+  // Connect listener
+  _socket!.onConnect((_) {
+    print('');
+    print('✅ Socket connected');
+    isConnected.value = true;
+    print('');
+  });
+
+  _socket!.onDisconnect((_) {
+    print('');
+    print('❌ Socket disconnected');
+    isConnected.value = false;
+    print('');
+  });
+
+  _socket!.onConnectError((data) {
+    print('❌ Connection Error: $data');
+  });
+
+  _socket!.onError((data) {
+    print('❌ Socket Error: $data');
+  });
+
+  // ฟังทุก event (สำหรับ debug)
+  _socket!.onAny((event, data) {
+    print('');
+    print('📡 ========== SOCKET EVENT ==========');
+    print('📡 Event: $event');
+    print('📡 Data: $data');
+    print('📡 ===================================');
+    print('');
+  });
+
+  // Listen for receive_message (ข้อความจากคนอื่น)
+  _socket!.on('receive_message', (data) {
+    print('');
+    print('📨 ========== RECEIVE_MESSAGE ==========');
+    print('📨 Data: $data');
+    
+    if (onMessage != null) {
+      print('✅ Calling onMessage callback');
+      onMessage!(data);
+    } else {
+      print('⚠️ onMessage callback is null');
+    }
+    print('📨 ======================================');
+    print('');
+  });
+
+  // Listen for message_sent (ยืนยันว่าส่งสำเร็จ)
+  _socket!.on('message_sent', (data) {
+    print('');
+    print('✅ ========== MESSAGE_SENT ==========');
+    print('✅ Data: $data');
+    
+    if (onMessage != null) {
+      print('✅ Calling onMessage callback');
+      onMessage!(data);
+    } else {
+      print('⚠️ onMessage callback is null');
+    }
+    print('✅ ===================================');
+    print('');
+  });
+
+  // ลองฟัง event อื่นๆ ที่อาจใช้
+  _socket!.on('message', (data) {
+    print('');
+    print('📨 ========== MESSAGE EVENT ==========');
+    print('📨 Data: $data');
+    
+    if (onMessage != null) {
+      onMessage!(data);
+    }
+    print('📨 ====================================');
+    print('');
+  });
+
+  // Listen for new message notification
+  _socket!.on('new_message_notification', (data) {
+    print('🔔 New message notification: $data');
+  });
+
+  // Listen for messages read
+  _socket!.on('messages_read', (data) {
+    print('✅ Messages marked as read: $data');
+  });
+
+  // Listen for typing
+  _socket!.on('user_typing', (data) {
+    print('⌨️ User typing: $data');
+  });
+
+  // Listen for user joined
+  _socket!.on('room_joined', (data) {
+    print('✅ Room joined: $data');
+  });
+
+  print('✅ Socket listeners set up');
+  print('🔌 Calling socket.connect()...');
+  
+  _socket!.connect();
+  
+  print('🔌 ===================================');
+  print('');
+} 
 
   // ใช้ HTTP API
   Future<void> getConversations() async {
@@ -256,25 +292,18 @@ class ChatController extends GetxController {
     print('🔗 ================================');
     print('');
   }
-
-  void sendMessage(String otherUserId, String message) {
-    print('');
-    print('📤 ========== SEND MESSAGE ==========');
-    
-    if (_socket == null || !_socket!.connected) {
-      print('❌ Socket not connected, cannot send');
-      print('📤 ===================================');
-      return;
-    }
-
-    print('📤 To: $otherUserId');
-    print('📤 Message: $message');
+  
+ void sendMessage(String otherUserId, String message) async {
+  print('📤 Sending message...');
+  
+  // ตรวจสอบว่า Socket เชื่อมต่ออยู่หรือไม่
+  final isSocketConnected = _socket != null && _socket!.connected;
+  
+  if (isSocketConnected) {
+    print('📤 Trying Socket first...');
     
     final userId = GetStorage().read('userId');
     final roomId = _createRoomId(userId, otherUserId);
-    
-    print('📤 Room ID: $roomId');
-    print('📤 Emitting send_message event...');
     
     _socket!.emit('send_message', {
       'roomId': roomId,
@@ -283,10 +312,51 @@ class ChatController extends GetxController {
       'messageType': 'text'
     });
     
-    print('✅ send_message emitted');
-    print('📤 ===================================');
-    print('');
+    print('✅ send_message emitted via Socket');
+    
+    // รอ 1.5 วินาที ถ้า Socket ไม่ตอบกลับ ให้ใช้ HTTP
+    await Future.delayed(const Duration(milliseconds: 1500));
+    
+    // ตรวจสอบว่าได้รับ callback หรือยัง
+    // ถ้ายังไม่ได้รับ ให้ส่งผ่าน HTTP
+    print('⚠️ Socket may not respond, sending via HTTP as backup');
+    await sendMessageHttp(otherUserId, message);
+    
+  } else {
+    // ถ้า Socket ไม่เชื่อมต่อ ใช้ HTTP เลย
+    print('❌ Socket not connected, using HTTP API');
+    await sendMessageHttp(otherUserId, message);
   }
+}
+Future<void> sendMessageHttp(String otherUserId, String message) async {
+  print('');
+  print('📤 ========== SEND MESSAGE (HTTP) ==========');
+  print('📤 To: $otherUserId');
+  print('📤 Message: $message');
+  
+  try {
+    final messageData = await chatService.sendMessage(otherUserId, message);
+    
+    print('✅ Message sent via HTTP');
+    print('📦 Response: $messageData');
+    
+    // เรียก callback เพื่ออัพเดท UI
+    if (onMessage != null) {
+      print('✅ Calling onMessage callback');
+      onMessage!(messageData);
+    } else {
+      print('⚠️ onMessage callback is null');
+    }
+    
+  } catch (e, stackTrace) {
+    print('❌ Error sending message via HTTP: $e');
+    print('❌ Stack trace: $stackTrace');
+    rethrow;
+  }
+  
+  print('📤 ==========================================');
+  print('');
+}
 
 void markAsRead(String otherUserId, List<String> messageIds) {
   print('✅ Marking messages as read for: $otherUserId');
