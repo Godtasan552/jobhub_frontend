@@ -762,16 +762,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const Spacer(), // ดันงบประมาณไปขวาสุด
                     Row(
                       children: [
-                        Icon(
-                          Icons.attach_money,
-                          size: 26,
-                          color: Colors.green,
-                        ), // ไอคอนใหญ่ขึ้น
-                        const SizedBox(width: 4),
                         Text(
-                          '฿${formatter.format(job.budget)}',
+                          '${formatter.format(job.budget)} THB', // ✅ แสดงเงิน + THB
                           style: TextStyle(
-                            fontSize: 22, // ✅ ขยายใหญ่
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: Colors.green,
                           ),

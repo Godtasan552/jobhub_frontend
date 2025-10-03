@@ -626,7 +626,7 @@ class _job_detailState extends State<job_detail>
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          '฿${formatter.format(job.budget)}',
+                                          '${formatter.format(job.budget)} THB',
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 32,
@@ -673,7 +673,6 @@ class _job_detailState extends State<job_detail>
                               const SizedBox(height: 16),
                               Row(
                                 children: [
-                                  
                                   Container(
                                     width: 1,
                                     height: 40,
