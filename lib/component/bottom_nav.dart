@@ -5,6 +5,9 @@ import '../screens/create_job.dart';
 import '../screens/notification_screen.dart';
 import '../screens/profilePage.dart';
 import '../controllers/notification_controller.dart';
+import 'package:form_validate/screens/chat.dart';
+import 'package:form_validate/screens/create_job.dart';
+import 'package:form_validate/screens/dashboard_Screen.dart';
 
 class BottomNav extends StatefulWidget {
   const BottomNav({super.key});
@@ -25,6 +28,9 @@ class _BottomNavState extends State<BottomNav> with TickerProviderStateMixin {
     const Center(child: Text("Chat ยังไม่ทำ")),
     const NotificationScreen(),
     const ProfilePage(),
+    const ChatScreen(),
+    Center(child: Text("Nontification")),
+    Center(child: Text("Settings")),
   ];
 
   @override

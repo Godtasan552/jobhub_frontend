@@ -11,12 +11,10 @@ abstract class AppRoutes {
   static const String DASHBOARD = '/dashboard';
   static const String JOB_DETAIL = '/job-detail';
   static const String NOTIFICATION = '/notification';
-  static const String DEBUGNOTI = '/debugnotification';
   static const String WALLET_PAGE = '/wallet-page';
   static const String MYJOB_FOSTED = '/myjobs';
   static const String MYJOB_DETAIL_POSTED = '/myjob-detail-posted';
-
-
+  static const String CHAT = '/chat';
 
   // Helper methods สำหรับการนำทาง
   static String getSplashRoute() => SPLASH;
@@ -28,9 +26,10 @@ abstract class AppRoutes {
   static String getDashboardRoute() => DASHBOARD;
   static String getJobDetailRoute() => JOB_DETAIL;
   static String getNotificationRoute() => NOTIFICATION;
-  static String getDebugRoute() => DEBUGNOTI;
+
   static String getWalletPageRoute() => WALLET_PAGE;
   static String getmyjobpostedPageRoute() => MYJOB_FOSTED;
   static String getmyjobdetailpostedPageRoute() => MYJOB_DETAIL_POSTED;
   
+  static String getChatRoute() => CHAT;
 }

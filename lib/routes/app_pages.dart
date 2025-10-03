@@ -1,5 +1,6 @@
 // lib/routes/app_pages.dart
 
+import 'package:form_validate/screens/chat.dart';
 import 'package:get/get.dart';
 import 'app_routes.dart';
 
@@ -58,6 +59,13 @@ class AppPages {
       page: () => const BottomNav(),
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.CHAT,
+      page: () => const ChatScreen(),  // ✅ เปลี่ยนชื่อ
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 300),
+
     ),
 
     // Profile Page
