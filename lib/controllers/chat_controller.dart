@@ -1,6 +1,10 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:form_validate/services/chat_service.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:dio/dio.dart';
+import '../services/chat_service.dart';
 
 class ChatController extends GetxController {
   static final ChatController instance = ChatController._internal();
@@ -9,6 +13,9 @@ class ChatController extends GetxController {
 
   IO.Socket? _socket;
   var isConnected = false.obs;
+  
+  late final ChatService chatService;
+  final Dio _dio = Dio();
 
   // Callbacks
   Function(dynamic)? onMessage;
@@ -18,14 +25,22 @@ class ChatController extends GetxController {
 
   static final String baseUrl = dotenv.env['BASE_URL'] ?? '';
 
+  @override
+  void onInit() {
+    super.onInit();
+    _dio.options.baseUrl = baseUrl;
+    chatService = ChatService(_dio);
+  }
+
   void connect(String token) {
+    print('🔌 ========== CONNECT START ==========');
+    
     if (_socket != null && _socket!.connected) {
-      print('Socket already connected');
+      print('⚠️ Socket already connected');
       return;
     }
 
-    print('Connecting to: $baseUrl');
-    print('Token: ${token.substring(0, 20)}...');
+    print('🌐 Connecting to: $baseUrl');
 
     _socket = IO.io(
       baseUrl,
@@ -36,17 +51,17 @@ class ChatController extends GetxController {
           .build(),
     );
 
-    _socket!.connect();
+    print('📝 Setting up Socket event listeners...');
 
+    // Connect listener
     _socket!.onConnect((_) {
-      isConnected.value = true;
       print('✅ Socket connected');
-      getConversations();
+      isConnected.value = true;
     });
 
     _socket!.onDisconnect((_) {
-      isConnected.value = false;
       print('❌ Socket disconnected');
+      isConnected.value = false;
     });
 
     _socket!.onConnectError((data) {
@@ -57,70 +72,128 @@ class ChatController extends GetxController {
       print('❌ Socket Error: $data');
     });
 
-    // Listen to conversations
-    _socket!.on('conversations', (data) {
-      print('📋 Conversations received: $data');
-      onConversations?.call(List.from(data));
-    });
-
-    // Listen to messages
-    _socket!.on('messages', (data) {
-      print('💬 Messages received: $data');
-      onMessages?.call(List.from(data));
-    });
-
-    // Listen to new message
-    _socket!.on('message', (data) {
-      print('📩 New message: $data');
-      onMessage?.call(data);
-    });
-
-    // Listen to unread count
-    _socket!.on('unread_count', (data) {
-      print('🔔 Unread count: $data');
-      if (data is Map && data['unreadCount'] != null) {
-        onUnreadCount?.call(data['unreadCount']);
+    // Listen for real-time messages
+    _socket!.on('receive_message', (data) {
+      print('📨 New message received via socket');
+      print('Data: $data');
+      
+      if (onMessage != null) {
+        onMessage!(data);
       }
     });
+
+    // Listen for message sent confirmation
+    _socket!.on('message_sent', (data) {
+      print('✅ Message sent confirmed');
+      if (onMessage != null) {
+        onMessage!(data);
+      }
+    });
+
+    // Listen for messages read
+    _socket!.on('messages_read', (data) {
+      print('✅ Messages marked as read');
+    });
+
+    // Listen for typing
+    _socket!.on('user_typing', (data) {
+      print('⌨️ User typing: $data');
+    });
+
+    print('✅ Socket listeners set up');
+    print('🔌 Calling socket.connect()...');
+    
+    _socket!.connect();
+    
+    print('🔌 ===================================');
   }
 
+  // ใช้ HTTP API แทน Socket
+  Future<void> getConversations() async {
+    try {
+      print('📋 Fetching conversations via HTTP...');
+      final conversations = await chatService.getConversations();
+      
+      if (onConversations != null) {
+        onConversations!(conversations);
+      }
+      
+    } catch (e) {
+      print('❌ Error: $e');
+    }
+  }
+
+  Future<void> getMessages(String otherUserId) async {
+    try {
+      print('💬 Fetching messages via HTTP...');
+      final messages = await chatService.getMessages(otherUserId);
+      
+      if (onMessages != null) {
+        onMessages!(messages);
+      }
+      
+    } catch (e) {
+      print('❌ Error: $e');
+    }
+  }
+
+  Future<void> getUnreadCount() async {
+    try {
+      final count = await chatService.getUnreadCount();
+      
+      if (onUnreadCount != null) {
+        onUnreadCount!(count);
+      }
+      
+    } catch (e) {
+      print('❌ Error: $e');
+    }
+  }
+  
+  // ใช้ Socket สำหรับ real-time
   void joinChat(String otherUserId) {
     if (_socket == null || !_socket!.connected) {
-      print('❌ Socket not connected, cannot join chat');
+      print('❌ Socket not connected');
       return;
     }
+
     print('🔗 Joining chat with: $otherUserId');
-    _socket!.emit('join_chat', {'otherUserId': otherUserId});
-    _socket!.emit('getMessages', {'otherUserId': otherUserId});
+    
+    final userId = GetStorage().read('userId');
+    final roomId = _createRoomId(userId, otherUserId);
+    
+    _socket!.emit('join_chat', {
+      'roomId': roomId,
+      'otherUserId': otherUserId
+    });
   }
 
   void sendMessage(String otherUserId, String message) {
     if (_socket == null || !_socket!.connected) {
-      print('❌ Socket not connected, cannot send message');
+      print('❌ Socket not connected');
       return;
     }
-    print('📤 Sending message to: $otherUserId');
+
+    print('📤 Sending message via Socket');
+    
+    final userId = GetStorage().read('userId');
+    final roomId = _createRoomId(userId, otherUserId);
+    
     _socket!.emit('send_message', {
+      'roomId': roomId,
       'toUserId': otherUserId,
       'message': message,
+      'messageType': 'text'
     });
   }
 
-  void getConversations() {
-    if (_socket == null || !_socket!.connected) {
-      print('❌ Socket not connected, cannot get conversations');
-      return;
-    }
-    print('📋 Getting conversations');
-    _socket!.emit('getConversations');
+  void markAsRead(String otherUserId) {
+    chatService.markAsRead(otherUserId);
   }
 
-  void markAsRead(String otherUserId) {
-    if (_socket == null || !_socket!.connected) {
-      print('❌ Socket not connected, cannot mark as read');
-      return;
-    }
-    _socket!.emit('mark_read', {'otherUserId': otherUserId});
+  String _createRoomId(String userId1, String userId2) {
+    final ids = [userId1, userId2]..sort();
+    return ids.join('-');
   }
 
   void disconnect() {
@@ -128,7 +201,7 @@ class ChatController extends GetxController {
     _socket?.dispose();
     _socket = null;
     isConnected.value = false;
-    print('🔌 Socket disconnected and disposed');
+    print('🔌 Socket disconnected');
   }
 
   @override

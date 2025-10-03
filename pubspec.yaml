@@ -15,6 +15,7 @@ dependencies:
   get_storage: ^2.1.1  # เก็บ JWT token แบบ local
   intl: ^0.20.2 
   socket_io_client: ^2.0.3+1
+  dio: ^5.9.0
 
 dev_dependencies:
   flutter_test:

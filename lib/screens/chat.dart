@@ -22,18 +22,23 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _initSocket();
+    print('🚀 ChatScreen initState');
+    _initChat();
   }
 
-  Future<void> _initSocket() async {
+  Future<void> _initChat() async {
+    print('🔄 Initializing chat...');
+    
     final token = storage.read('token');
     if (token == null) {
+      print('❌ No token');
       setState(() => isLoading = false);
       return;
     }
 
-    // Set up callbacks
+    // Setup callbacks
     chatController.onConversations = (data) {
+      print('✅ Conversations callback: ${data.length} items');
       if (mounted) {
         setState(() {
           conversations = data;
@@ -50,8 +55,31 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     };
 
-    // Connect socket
+    // Connect socket for real-time
     chatController.connect(token);
+    
+    // Fetch initial data via HTTP
+    await _loadConversations();
+    await _loadUnreadCount();
+  }
+
+  Future<void> _loadConversations() async {
+    try {
+      await chatController.getConversations();
+    } catch (e) {
+      print('❌ Error loading conversations: $e');
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _loadUnreadCount() async {
+    try {
+      await chatController.getUnreadCount();
+    } catch (e) {
+      print('❌ Error loading unread count: $e');
+    }
   }
 
   @override
@@ -125,7 +153,8 @@ class _ChatScreenState extends State<ChatScreen> {
               : RefreshIndicator(
                   color: const Color(0xFFA3CFBB),
                   onRefresh: () async {
-                    chatController.getConversations();
+                    await _loadConversations();
+                    await _loadUnreadCount();
                   },
                   child: ListView.builder(
                     itemCount: conversations.length,
@@ -136,10 +165,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       final unread = chat["unreadCount"] ?? 0;
 
                       return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 8, 
-                          vertical: 4
-                        ),
+                        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -169,7 +195,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           subtitle: Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
-                              lastMessage["message"] ?? "",
+                              lastMessage["content"] ?? lastMessage["message"] ?? "",
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -182,9 +208,9 @@ class _ChatScreenState extends State<ChatScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              if (lastMessage["createdAt"] != null)
+                              if (lastMessage["time"] != null || lastMessage["createdAt"] != null)
                                 Text(
-                                  _formatTime(lastMessage["createdAt"]),
+                                  _formatTime(lastMessage["time"] ?? lastMessage["createdAt"]),
                                   style: TextStyle(
                                     color: Colors.grey[500],
                                     fontSize: 12,
@@ -213,12 +239,12 @@ class _ChatScreenState extends State<ChatScreen> {
                             ],
                           ),
                           onTap: () {
-                            final otherUserId = otherUser["id"]?.toString() ?? "";
+                            final otherUserId = otherUser["id"]?.toString() ?? 
+                                               otherUser["_id"]?.toString() ?? "";
+                            
                             if (otherUserId.isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('ไม่พบข้อมูล User ID')
-                                ),
+                                const SnackBar(content: Text('ไม่พบข้อมูล User ID')),
                               );
                               return;
                             }
@@ -231,8 +257,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                   otherUserName: otherUser["name"] ?? "User",
                                 ),
                               ),
-                            ).then((_) {
-                              chatController.getConversations();
+                            ).then((_) async {
+                              await _loadConversations();
+                              await _loadUnreadCount();
                             });
                           },
                         ),
@@ -546,3 +573,4 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     );
   }
 }
+// ChatDetailPage ต่อในข้อความถัดไป...
