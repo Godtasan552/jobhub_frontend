@@ -11,7 +11,6 @@ import '../screens/forget_pass.dart';
 import '../component/bottom_nav.dart';
 import '../screens/job_detail.dart';
 import '../screens/profilePage.dart';
-import '../screens/dashboard_Screen.dart';
 import '../screens/notification_screen.dart';
 import '../screens/wallet.dart';
 import '../screens/my_posted_jobs_detail_screen.dart';

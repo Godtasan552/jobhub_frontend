@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../controllers/chat_controller.dart';
 import 'package:intl/intl.dart';
-
+import 'dart:convert';  // สำหรับ jsonDecode, utf8
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
 
@@ -114,18 +114,7 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         backgroundColor: const Color.fromARGB(255, 57, 95, 78),
         foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          Obx(() => Icon(
-            chatController.isConnected.value 
-                ? Icons.wifi 
-                : Icons.wifi_off,
-            color: chatController.isConnected.value 
-                ? Colors.white 
-                : Colors.red,
-          )),
-          const SizedBox(width: 16),
-        ],
+
       ),
       body: isLoading
           ? const Center(
@@ -326,7 +315,34 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 void _initChat() {
   print('🔄 Initializing chat detail...');
   
-  final userId = storage.read('userId');
+  // ✅ ลองดึงจาก AuthService ก่อน
+  String? userId = storage.read('userId');
+  
+  // ถ้าไม่มี ลอง decode จาก token
+  if (userId == null) {
+    final token = storage.read('token');
+    if (token != null) {
+      try {
+        final parts = token.split('.');
+        if (parts.length == 3) {
+          final payload = parts[1];
+          final normalized = base64Url.normalize(payload);
+          final decoded = utf8.decode(base64Url.decode(normalized));
+          final Map<String, dynamic> payloadMap = jsonDecode(decoded);
+          userId = payloadMap['userId']?.toString();
+          
+          // บันทึกลง storage
+          if (userId != null) {
+            storage.write('userId', userId);
+            print('✅ userId decoded and saved: $userId');
+          }
+        }
+      } catch (e) {
+        print('❌ Error decoding token: $e');
+      }
+    }
+  }
+  
   print('🔑 My userId: $userId');
   
   if (userId == null) {
