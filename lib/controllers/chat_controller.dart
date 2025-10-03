@@ -1,10 +1,12 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:http/http.dart' as storage;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:dio/dio.dart';
 import '../services/chat_service.dart';
 
+import 'package:get_storage/get_storage.dart';
 class ChatController extends GetxController {
   static final ChatController instance = ChatController._internal();
   factory ChatController() => instance;
@@ -286,10 +288,37 @@ class ChatController extends GetxController {
     print('');
   }
 
-  void markAsRead(String otherUserId) {
-    print('✅ Marking messages as read for: $otherUserId');
-    chatService.markAsRead(otherUserId);
+void markAsRead(String otherUserId, List<String> messageIds) {
+  print('✅ Marking messages as read for: $otherUserId');
+  chatService.markAsRead(otherUserId, messageIds);
+} 
+  // ใน chat_controller.dart
+Future<void> markAsReadWithMessages(String otherUserId, List<String> messageIds) async {
+  if (messageIds.isEmpty) {
+    print('⚠️ No messages to mark as read');
+    return;
   }
+  
+  try {
+    print('✅ Marking ${messageIds.length} messages as read');
+    
+    final token = GetStorage().read('token');
+    await _dio.post(
+      '/api/v1/chat/mark-read',
+      data: {
+        'messageIds': messageIds,
+      },
+      options: Options(
+        headers: {'Authorization': 'Bearer $token'}
+      ),
+    );
+    
+    print('✅ Messages marked as read');
+    
+  } catch (e) {
+    print('❌ Error marking as read: $e');
+  }
+}
 
   String _createRoomId(String userId1, String userId2) {
     final ids = [userId1, userId2]..sort();

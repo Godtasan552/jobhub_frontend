@@ -70,21 +70,31 @@ class ChatService {
     }
   }
 
-  Future<void> markAsRead(String otherUserId) async {
-    try {
-      final token = storage.read('token');
-      await _dio.post(
-        '/api/v1/chat/mark-read',
-        data: {'otherUserId': otherUserId},
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'}
-        ),
-      );
-      
-      print('✅ Marked messages as read');
-      
-    } catch (e) {
-      print('❌ Error marking as read: $e');
+Future<void> markAsRead(String otherUserId, List<String> messageIds) async {
+  try {
+    if (messageIds.isEmpty) {
+      print('⚠️ No messages to mark as read');
+      return;
     }
+    
+    print('✅ Marking ${messageIds.length} messages as read');
+    
+    final token = storage.read('token');
+    await _dio.post(
+      '/api/v1/chat/mark-read',
+      data: {
+        'messageIds': messageIds,  // ส่ง messageIds ตามที่ backend ต้องการ
+      },
+      options: Options(
+        headers: {'Authorization': 'Bearer $token'}
+      ),
+    );
+    
+    print('✅ Messages marked as read successfully');
+    
+  } catch (e) {
+    print('❌ Error marking as read: $e');
+    // ไม่ throw เพราะไม่ใช่ฟีเจอร์หลัก
   }
+}
 }

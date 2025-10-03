@@ -323,90 +323,123 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _initChat();
   }
 
-  void _initChat() {
-    print('🔄 Initializing chat detail...');
+void _initChat() {
+  print('🔄 Initializing chat detail...');
+  
+  final userId = storage.read('userId');
+  print('🔑 My userId: $userId');
+  
+  if (userId == null) {
+    print('❌ userId is null!');
     
-    // ตรวจสอบ userId
-    final userId = storage.read('userId');
-    print('🔑 My userId: $userId');
-    
-    if (userId == null) {
-      print('❌ userId is null!');
-      
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          Navigator.pop(context);
-        }
-      });
-      
-      setState(() {
-        isLoading = false;
-        errorMessage = 'ไม่พบข้อมูลผู้ใช้';
-      });
-      return;
-    }
-
-    // Setup callbacks
-    chatController.onMessages = (data) {
-      print('✅ Messages callback: ${data.length} items');
-      
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        setState(() {
-          // เรียงข้อความจากเก่าไปใหม่ (เก่าสุดอยู่บน ใหม่สุดอยู่ล่าง)
-          messages = List.from(data);
-          
-          // ถ้า API ส่งมาเรียงจากใหม่ไปเก่า ให้ reverse
-          if (messages.isNotEmpty) {
-            // ตรวจสอบว่าข้อความแรกใหม่กว่าข้อความสุดท้ายหรือไม่
-            try {
-              final firstDate = DateTime.parse(messages.first['createdAt']);
-              final lastDate = DateTime.parse(messages.last['createdAt']);
-              
-              if (firstDate.isAfter(lastDate)) {
-                print('🔄 Reversing messages order (newest first -> oldest first)');
-                messages = messages.reversed.toList();
-              }
-            } catch (e) {
-              print('⚠️ Cannot sort messages: $e');
-            }
-          }
-          
-          isLoading = false;
-          
-          print('✅ Messages sorted: ${messages.length} items');
-        });
-        _scrollToBottom();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.pop(context);
       }
-    };
-
-    chatController.onMessage = (data) {
-      print('📨 New message callback');
-      print('Data: $data');
-      
-      if (mounted) {
-        setState(() {
-          // เพิ่มข้อความใหม่ที่ท้ายสุด
-          messages.add(data);
-        });
-        _scrollToBottom();
-      }
-    };
-
-    // Join chat via socket
-    chatController.joinChat(widget.otherUserId);
+    });
     
-    // Load messages via HTTP
-    _loadMessages();
-    
-    // Mark as read
-    chatController.markAsRead(widget.otherUserId);
+    setState(() {
+      isLoading = false;
+      errorMessage = 'ไม่พบข้อมูลผู้ใช้';
+    });
+    return;
   }
+
+  // Setup callbacks
+  chatController.onMessages = (data) {
+    print('✅ Messages callback: ${data.length} items');
+    
+    if (mounted) {
+      setState(() {
+        messages = List.from(data);
+        
+        if (messages.isNotEmpty) {
+          try {
+            final firstDate = DateTime.parse(messages.first['createdAt']);
+            final lastDate = DateTime.parse(messages.last['createdAt']);
+            
+            if (firstDate.isAfter(lastDate)) {
+              print('🔄 Reversing messages order');
+              messages = messages.reversed.toList();
+            }
+          } catch (e) {
+            print('⚠️ Cannot sort messages: $e');
+          }
+        }
+        
+        isLoading = false;
+      });
+      
+      _scrollToBottom();
+      
+      // Mark as read หลังจากโหลดข้อความ
+      _markMessagesAsRead();
+    }
+  };
+
+  chatController.onMessage = (data) {
+    print('📨 New message callback');
+    
+    if (mounted) {
+      setState(() {
+        messages.add(data);
+      });
+      _scrollToBottom();
+    }
+  };
+
+  chatController.joinChat(widget.otherUserId);
+  _loadMessages();
+}
+
+// ฟังก์ชันสำหรับ mark messages as read
+void _markMessagesAsRead() {
+  try {
+    final userId = storage.read('userId')?.toString();
+    if (userId == null) return;
+    
+    // หา messageIds ที่ยังไม่ได้อ่าน (จากคนอื่น)
+    final unreadMessageIds = <String>[];
+    
+    for (var msg in messages) {
+      // ดึง fromUserId
+      String? fromUserId;
+      if (msg["fromUserId"] is Map) {
+        fromUserId = msg["fromUserId"]["_id"]?.toString() ?? 
+                    msg["fromUserId"]["id"]?.toString();
+      } else {
+        fromUserId = msg["fromUserId"]?.toString();
+      }
+      
+      // ดึง messageId
+      final messageId = msg["_id"]?.toString() ?? msg["id"]?.toString();
+      
+      // เลือกเฉพาะข้อความจากคนอื่นที่ยังไม่อ่าน
+      if (fromUserId != null && 
+          fromUserId != userId && 
+          msg["read"] == false &&
+          messageId != null) {
+        unreadMessageIds.add(messageId);
+      }
+    }
+    
+    if (unreadMessageIds.isNotEmpty) {
+      print('📖 Marking ${unreadMessageIds.length} messages as read: $unreadMessageIds');
+      chatController.markAsRead(widget.otherUserId, unreadMessageIds);
+    } else {
+      print('✅ No unread messages to mark');
+    }
+    
+  } catch (e) {
+    print('❌ Error in _markMessagesAsRead: $e');
+  }
+} 
 
   Future<void> _loadMessages() async {
     print('💬 Loading messages...');
