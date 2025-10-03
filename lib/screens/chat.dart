@@ -112,7 +112,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
           ],
         ),
-        backgroundColor: const Color(0xFFA3CFBB),
+        backgroundColor: const Color.fromARGB(255, 57, 95, 78),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -130,7 +130,7 @@ class _ChatScreenState extends State<ChatScreen> {
       body: isLoading
           ? const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFA3CFBB)),
+                valueColor: AlwaysStoppedAnimation<Color>(Color.fromARGB(255, 60, 78, 70)),
               ),
             )
           : conversations.isEmpty
@@ -140,7 +140,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     children: [
                       Icon(Icons.chat_bubble_outline, 
                         size: 64, 
-                        color: Colors.grey[400]
+                        color: const Color.fromARGB(255, 43, 43, 43)
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -174,7 +174,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         child: ListTile(
                           contentPadding: const EdgeInsets.all(12),
                           leading: CircleAvatar(
-                            backgroundColor: const Color(0xFFA3CFBB),
+                            backgroundColor: const Color.fromARGB(255, 55, 70, 63),
                             radius: 28,
                             child: Text(
                               (otherUser["name"] ?? "U")[0].toUpperCase(),
@@ -199,7 +199,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: Colors.grey[600],
+                                color: const Color.fromARGB(255, 37, 37, 37),
                                 fontSize: 14,
                               ),
                             ),
@@ -510,7 +510,7 @@ void _markMessagesAsRead() {
               child: Text(
                 widget.otherUserName[0].toUpperCase(),
                 style: const TextStyle(
-                  color: Color(0xFFA3CFBB),
+                  color: Color.fromARGB(255, 54, 66, 61),
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -524,7 +524,7 @@ void _markMessagesAsRead() {
             ),
           ],
         ),
-        backgroundColor: const Color(0xFFA3CFBB),
+        backgroundColor: const Color.fromARGB(255, 65, 87, 77),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -555,7 +555,7 @@ void _markMessagesAsRead() {
                         Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFA3CFBB),
+                        backgroundColor: const Color.fromARGB(255, 35, 49, 43),
                       ),
                       child: const Text('กลับ'),
                     ),
@@ -570,7 +570,7 @@ void _markMessagesAsRead() {
                       ? const Center(
                           child: CircularProgressIndicator(
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              Color(0xFFA3CFBB)
+                              Color.fromARGB(255, 57, 78, 69)
                             ),
                           ),
                         )
@@ -637,7 +637,7 @@ void _markMessagesAsRead() {
                                     ),
                                     decoration: BoxDecoration(
                                       color: isFromMe
-                                          ? const Color(0xFFA3CFBB)  // สีเขียว - ข้อความของเรา
+                                          ? const Color.fromARGB(255, 96, 124, 111)  // สีเขียว - ข้อความของเรา
                                           : Colors.white,             // สีขาว - ข้อความคนอื่น
                                       borderRadius: BorderRadius.only(
                                         topLeft: const Radius.circular(16),
