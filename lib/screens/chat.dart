@@ -1,13 +1,8 @@
-// chat.dart
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
 import '../controllers/chat_controller.dart';
-
-final String BASE_URL = dotenv.env['BASE_URL'] ?? 'http://localhost:5000';
+import 'package:intl/intl.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -18,65 +13,52 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final storage = GetStorage();
-  final ChatController _chatController = ChatController();
-
+  final chatController = ChatController.instance;
+  
   List conversations = [];
+  bool isLoading = true;
   int unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
-    final token = storage.read('token');
-    if (token != null) _chatController.connect(token);
-
-    _chatController.onConversations = (data) {
-      setState(() => conversations = data);
-    };
-
-    fetchUnreadCount();
+    _initSocket();
   }
 
-  Future<void> fetchUnreadCount() async {
+  Future<void> _initSocket() async {
     final token = storage.read('token');
-    print(token);
-    if (token == null) return;
+    if (token == null) {
+      setState(() => isLoading = false);
+      return;
+    }
 
-    try {
-      final url = Uri.parse("$BASE_URL/api/v1/chat/unread-count");
-      final response = await http.get(url, headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      });
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+    // Set up callbacks
+    chatController.onConversations = (data) {
+      if (mounted) {
         setState(() {
-          unreadCount = data["data"]?["unreadCount"] ?? 0;
+          conversations = data;
+          isLoading = false;
         });
       }
-    } catch (e) {
-      print("Error fetchUnreadCount: $e");
-    }
+    };
+
+    chatController.onUnreadCount = (count) {
+      if (mounted) {
+        setState(() {
+          unreadCount = count;
+        });
+      }
+    };
+
+    // Connect socket
+    chatController.connect(token);
   }
 
   @override
   void dispose() {
-    _chatController.disconnect();
+    chatController.onConversations = null;
+    chatController.onUnreadCount = null;
     super.dispose();
-  }
-
-  String _formatTime(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      final now = DateTime.now();
-      final diff = now.difference(date);
-
-      if (diff.inDays == 0) return DateFormat('HH:mm').format(date);
-      if (diff.inDays == 1) return 'เมื่อวาน';
-      if (diff.inDays < 7) return '${diff.inDays} วันที่แล้ว';
-      return DateFormat('dd/MM').format(date);
-    } catch (e) {
-      return '';
-    }
   }
 
   @override
@@ -105,129 +87,190 @@ class _ChatScreenState extends State<ChatScreen> {
         backgroundColor: const Color(0xFFA3CFBB),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          Obx(() => Icon(
+            chatController.isConnected.value 
+                ? Icons.wifi 
+                : Icons.wifi_off,
+            color: chatController.isConnected.value 
+                ? Colors.white 
+                : Colors.red,
+          )),
+          const SizedBox(width: 16),
+        ],
       ),
-      body: RefreshIndicator(
-        color: const Color(0xFFA3CFBB),
-        onRefresh: () async {
-          _chatController.getConversations();
-          await fetchUnreadCount();
-        },
-        child: ListView.builder(
-          itemCount: conversations.length,
-          itemBuilder: (context, index) {
-            final chat = conversations[index];
-            final otherUser = chat["otherUser"] ?? {};
-            final lastMessage = chat["lastMessage"] ?? {};
-            final unread = chat["unreadCount"] ?? 0;
-
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.grey[200]!),
+      body: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFA3CFBB)),
               ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(12),
-                leading: CircleAvatar(
-                  backgroundColor: const Color(0xFFA3CFBB),
-                  radius: 28,
-                  child: Text(
-                    (otherUser["firstName"] ?? "U")[0].toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                title: Text(
-                  "${otherUser["firstName"] ?? ""} ${otherUser["lastName"] ?? ""}",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    lastMessage["message"] ?? "",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (lastMessage["createdAt"] != null)
+            )
+          : conversations.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.chat_bubble_outline, 
+                        size: 64, 
+                        color: Colors.grey[400]
+                      ),
+                      const SizedBox(height: 16),
                       Text(
-                        _formatTime(lastMessage["createdAt"]),
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 12,
-                        ),
+                        "ยังไม่มีแชท",
+                        style: TextStyle(color: Colors.grey[600], fontSize: 16),
                       ),
-                    const SizedBox(height: 4),
-                    if (unread > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  color: const Color(0xFFA3CFBB),
+                  onRefresh: () async {
+                    chatController.getConversations();
+                  },
+                  child: ListView.builder(
+                    itemCount: conversations.length,
+                    itemBuilder: (context, index) {
+                      final chat = conversations[index];
+                      final otherUser = chat["otherUser"] ?? {};
+                      final lastMessage = chat["lastMessage"] ?? {};
+                      final unread = chat["unreadCount"] ?? 0;
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 8, 
+                          vertical: 4
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.grey[200]!),
                         ),
-                        child: Text(
-                          "$unread",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(12),
+                          leading: CircleAvatar(
+                            backgroundColor: const Color(0xFFA3CFBB),
+                            radius: 28,
+                            child: Text(
+                              (otherUser["name"] ?? "U")[0].toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
+                          title: Text(
+                            otherUser["name"] ?? "Unknown",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              lastMessage["message"] ?? "",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (lastMessage["createdAt"] != null)
+                                Text(
+                                  _formatTime(lastMessage["createdAt"]),
+                                  style: TextStyle(
+                                    color: Colors.grey[500],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              const SizedBox(height: 4),
+                              if (unread > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    "$unread",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          onTap: () {
+                            final otherUserId = otherUser["id"]?.toString() ?? "";
+                            if (otherUserId.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('ไม่พบข้อมูล User ID')
+                                ),
+                              );
+                              return;
+                            }
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatDetailPage(
+                                  otherUserId: otherUserId,
+                                  otherUserName: otherUser["name"] ?? "User",
+                                ),
+                              ),
+                            ).then((_) {
+                              chatController.getConversations();
+                            });
+                          },
                         ),
-                      ),
-                  ],
+                      );
+                    },
+                  ),
                 ),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ChatDetailPage(
-                        otherUserId: otherUser["_id"] ?? "",
-                        otherUserName:
-                            "${otherUser["firstName"] ?? ""} ${otherUser["lastName"] ?? ""}",
-                        chatController: _chatController,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            );
-          },
-        ),
-      ),
     );
   }
+
+  String _formatTime(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      final now = DateTime.now();
+      final diff = now.difference(date);
+
+      if (diff.inDays == 0) {
+        return DateFormat('HH:mm').format(date);
+      } else if (diff.inDays == 1) {
+        return 'เมื่อวาน';
+      } else if (diff.inDays < 7) {
+        return '${diff.inDays} วันที่แล้ว';
+      } else {
+        return DateFormat('dd/MM').format(date);
+      }
+    } catch (e) {
+      return '';
+    }
+  }
 }
-
-// ======================== Chat Detail Page ========================
-
 class ChatDetailPage extends StatefulWidget {
   final String otherUserId;
   final String otherUserName;
-  final ChatController chatController;
 
   const ChatDetailPage({
     super.key,
     required this.otherUserId,
     required this.otherUserName,
-    required this.chatController,
   });
 
   @override
@@ -236,64 +279,71 @@ class ChatDetailPage extends StatefulWidget {
 
 class _ChatDetailPageState extends State<ChatDetailPage> {
   final storage = GetStorage();
+  final chatController = ChatController.instance;
+  
+  List messages = [];
+  bool isLoading = true;
   final TextEditingController messageController = TextEditingController();
   final ScrollController scrollController = ScrollController();
-  List messages = [];
-
-  bool isSending = false;
 
   @override
   void initState() {
     super.initState();
-
-    widget.chatController.joinChat(widget.otherUserId);
-
-    widget.chatController.onMessages = (data) {
-      setState(() {
-        messages = data;
-      });
-      scrollToBottom();
-    };
-
-    widget.chatController.onMessage = (msg) {
-      setState(() {
-        messages.add(msg);
-      });
-      scrollToBottom();
-    };
+    _initChat();
   }
 
-  void scrollToBottom() {
+  void _initChat() {
+    // Set up callbacks
+    chatController.onMessages = (data) {
+      if (mounted) {
+        setState(() {
+          messages = data.reversed.toList();
+          isLoading = false;
+        });
+        _scrollToBottom();
+      }
+    };
+
+    chatController.onMessage = (data) {
+      if (mounted) {
+        setState(() {
+          messages.add(data);
+        });
+        _scrollToBottom();
+      }
+    };
+
+    // Join chat
+    chatController.joinChat(widget.otherUserId);
+    chatController.markAsRead(widget.otherUserId);
+  }
+
+  void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (scrollController.hasClients) {
-        scrollController.jumpTo(scrollController.position.maxScrollExtent);
+        scrollController.animateTo(
+          scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
 
-  void sendMessage() {
-    final text = messageController.text.trim();
-    if (text.isEmpty) return;
-
-    setState(() => isSending = true);
-    widget.chatController.sendMessage(widget.otherUserId, text);
+  void _sendMessage() {
+    if (messageController.text.trim().isEmpty) return;
+    
+    chatController.sendMessage(
+      widget.otherUserId,
+      messageController.text.trim(),
+    );
     messageController.clear();
-    setState(() => isSending = false);
-  }
-
-  Future<void> markAsRead() async {
-    final token = storage.read("token");
-    if (token == null) return;
-
-    final url = Uri.parse("$BASE_URL/api/v1/chat/mark-read");
-    await http.post(url,
-        headers: {"Authorization": "Bearer $token", "Content-Type": "application/json"},
-        body: json.encode({"otherUserId": widget.otherUserId}));
   }
 
   @override
   void dispose() {
-    markAsRead();
+    chatController.onMessages = null;
+    chatController.onMessage = null;
     messageController.dispose();
     scrollController.dispose();
     super.dispose();
@@ -301,7 +351,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final userId = storage.read("userId");
+    final userId = storage.read('userId');
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -313,11 +363,19 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               radius: 18,
               child: Text(
                 widget.otherUserName[0].toUpperCase(),
-                style: const TextStyle(color: Color(0xFFA3CFBB), fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Color(0xFFA3CFBB),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(width: 12),
-            Expanded(child: Text(widget.otherUserName, overflow: TextOverflow.ellipsis)),
+            Expanded(
+              child: Text(
+                widget.otherUserName,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         backgroundColor: const Color(0xFFA3CFBB),
@@ -327,73 +385,122 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       body: Column(
         children: [
           Expanded(
-            child: messages.isEmpty
-                ? Center(
-                    child: Text(
-                      "ยังไม่มีข้อความ",
-                      style: TextStyle(color: Colors.grey[600]),
+            child: isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(0xFFA3CFBB)
+                      ),
                     ),
                   )
-                : ListView.builder(
-                    controller: scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = messages[index];
-                      final fromUserId = msg["fromUserId"] is Map ? msg["fromUserId"]["id"] : msg["fromUserId"];
-                      final isMe = fromUserId == userId;
-
-                      return Align(
-                        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: isMe ? const Color(0xFFA3CFBB) : Colors.white,
-                            borderRadius: BorderRadius.only(
-                              topLeft: const Radius.circular(16),
-                              topRight: const Radius.circular(16),
-                              bottomLeft: Radius.circular(isMe ? 16 : 4),
-                              bottomRight: Radius.circular(isMe ? 4 : 16),
+                : messages.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.chat_outlined,
+                              size: 64,
+                              color: Colors.grey[400]
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 5,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                msg["message"] ?? "",
-                                style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 15),
-                              ),
-                              if (msg["createdAt"] != null) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  DateFormat('HH:mm').format(DateTime.parse(msg["createdAt"])),
-                                  style: TextStyle(
-                                    color: isMe ? Colors.white70 : Colors.grey[500],
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
+                            const SizedBox(height: 16),
+                            Text(
+                              "ยังไม่มีข้อความ",
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
+                      )
+                    : ListView.builder(
+                        controller: scrollController,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: messages.length,
+                        itemBuilder: (context, index) {
+                          final msg = messages[index];
+                          final fromUserId = msg["fromUserId"] is Map
+                              ? msg["fromUserId"]["id"]
+                              : msg["fromUserId"];
+                          final isMe = fromUserId == userId;
+
+                          return Align(
+                            alignment: isMe
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              constraints: BoxConstraints(
+                                maxWidth:
+                                    MediaQuery.of(context).size.width * 0.7,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isMe
+                                    ? const Color(0xFFA3CFBB)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.only(
+                                  topLeft: const Radius.circular(16),
+                                  topRight: const Radius.circular(16),
+                                  bottomLeft:
+                                      Radius.circular(isMe ? 16 : 4),
+                                  bottomRight:
+                                      Radius.circular(isMe ? 4 : 16),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 5,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    msg["message"] ?? "",
+                                    style: TextStyle(
+                                      color: isMe
+                                          ? Colors.white
+                                          : Colors.black87,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  if (msg["createdAt"] != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      DateFormat('HH:mm').format(
+                                        DateTime.parse(msg["createdAt"]),
+                                      ),
+                                      style: TextStyle(
+                                        color: isMe
+                                            ? Colors.white70
+                                            : Colors.grey[500],
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
           ),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2))],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
+                ),
+              ],
             ),
             child: Row(
               children: [
@@ -404,25 +511,31 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       hintText: "พิมพ์ข้อความ...",
                       filled: true,
                       fillColor: Colors.grey[100],
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
                     ),
                     maxLines: null,
                     textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => sendMessage(),
+                    onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Container(
                   decoration: const BoxDecoration(
-                    gradient: LinearGradient(colors: [Color(0xFFA3CFBB), Color(0xFF8BC0A8)]),
+                    gradient: LinearGradient(
+                      colors: [Color(0xFFA3CFBB), Color(0xFF8BC0A8)],
+                    ),
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
-                    icon: isSending
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-                        : const Icon(Icons.send, color: Colors.white),
-                    onPressed: isSending ? null : sendMessage,
+                    icon: const Icon(Icons.send, color: Colors.white),
+                    onPressed: _sendMessage,
                   ),
                 ),
               ],
