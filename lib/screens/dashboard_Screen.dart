@@ -255,23 +255,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               size: 26,
                             ),
                             onPressed: () {
-                              Get.to(() => NotificationScreen());// ไปหน้าแจ้งเตือน
+                              Get.to(
+                                () => NotificationScreen(),
+                              ); // ไปหน้าแจ้งเตือน
                             },
                           ),
                           const SizedBox(width: 6),
-GestureDetector(
-  onTap: () {
-    // ไปหน้า Profile
-    Get.to(() => ProfilePage());
-
-  },
-  child: CircleAvatar(
-    radius: 18,
-    backgroundColor: Colors.white,
-    child: Icon(Icons.person, color: primaryColor),
-  ),
-),
-
+                          GestureDetector(
+                            onTap: () {
+                              // ไปหน้า Profile
+                              Get.to(() => ProfilePage());
+                            },
+                            child: CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Colors.white,
+                              child: Icon(Icons.person, color: primaryColor),
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -319,41 +319,60 @@ GestureDetector(
   }
 
   Widget _buildHeader() {
-  return Padding(
-    padding: const EdgeInsets.all(20),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        // ด้านซ้าย
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'งานทั้งหมดของฉัน',
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // 🔹 ด้านซ้าย
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'งานทั้งหมดของฉัน',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '${_filteredJobs.length} งานที่พร้อมให้คุณสมัคร',
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+
+          // 🔹 ด้านขวา → ปุ่มเล็ก สวย เรียบหรู
+          OutlinedButton.icon(
+            onPressed: () => Get.toNamed(AppRoutes.getmyjobpostedPageRoute()),
+            icon: Icon(Icons.folder_open, size: 18, color: primaryColor),
+            label: Text(
+              'งานของฉัน',
               style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
                 color: primaryColor,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '${_filteredJobs.length} งานที่พร้อมให้คุณสมัคร',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              side: BorderSide(
+                color: primaryColor.withOpacity(0.5),
+                width: 1.2,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              backgroundColor: Colors.white,
+              elevation: 0,
             ),
-          ],
-        ),
-
-        // ด้านขวา → ปุ่ม
-        ElevatedButton(
-          onPressed: () => Get.toNamed(AppRoutes.getmyjobpostedPageRoute()),
-          child: const Text('งานของฉัน'),
-        ),
-      ],
-    ),
-  );
-}
-
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildCategoryFilter() {
     return Column(
