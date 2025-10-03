@@ -316,33 +316,87 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   @override
   void initState() {
     super.initState();
+    print('🚀 ChatDetailPage initState');
+    print('👤 Other user ID: ${widget.otherUserId}');
+    print('👤 Other user name: ${widget.otherUserName}');
     _initChat();
   }
 
-  void _initChat() {
-    // Set up callbacks
-    chatController.onMessages = (data) {
+void _initChat() {
+  print('🔄 Initializing chat detail...');
+  
+  // ตรวจสอบ userId
+  final userId = storage.read('userId');
+  print('🔑 My userId: $userId');
+  
+  if (userId == null) {
+    print('❌ userId is null!');
+    
+    // แสดง error หลัง build เสร็จ
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        setState(() {
-          messages = data.reversed.toList();
-          isLoading = false;
-        });
-        _scrollToBottom();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        // กลับไปหน้าก่อนหน้า
+        Navigator.pop(context);
       }
-    };
+    });
+    
+    setState(() => isLoading = false);
+    return;
+  }
 
-    chatController.onMessage = (data) {
+  // Setup callbacks
+  chatController.onMessages = (data) {
+    print('✅ Messages callback: ${data.length} items');
+    if (mounted) {
+      setState(() {
+        messages = data;
+        isLoading = false;
+      });
+      _scrollToBottom();
+    }
+  };
+
+  chatController.onMessage = (data) {
+    print('📨 New message callback');
+    print('Data: $data');
+    
+    if (mounted) {
+      setState(() {
+        messages.add(data);
+      });
+      _scrollToBottom();
+    }
+  };
+
+  // Join chat via socket
+  chatController.joinChat(widget.otherUserId);
+  
+  // Load messages via HTTP
+  _loadMessages();
+  
+  // Mark as read
+  chatController.markAsRead(widget.otherUserId);
+}
+
+  Future<void> _loadMessages() async {
+    print('💬 Loading messages...');
+    try {
+      await chatController.getMessages(widget.otherUserId);
+    } catch (e) {
+      print('❌ Error loading messages: $e');
       if (mounted) {
-        setState(() {
-          messages.add(data);
-        });
-        _scrollToBottom();
+        setState(() => isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
+        );
       }
-    };
-
-    // Join chat
-    chatController.joinChat(widget.otherUserId);
-    chatController.markAsRead(widget.otherUserId);
+    }
   }
 
   void _scrollToBottom() {
@@ -360,15 +414,19 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   void _sendMessage() {
     if (messageController.text.trim().isEmpty) return;
     
+    print('📤 Sending message: ${messageController.text.trim()}');
+    
     chatController.sendMessage(
       widget.otherUserId,
       messageController.text.trim(),
     );
+    
     messageController.clear();
   }
 
   @override
   void dispose() {
+    print('🗑️ ChatDetailPage dispose');
     chatController.onMessages = null;
     chatController.onMessage = null;
     messageController.dispose();
@@ -379,6 +437,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   @override
   Widget build(BuildContext context) {
     final userId = storage.read('userId');
+    
+    print('🎨 Building ChatDetailPage');
+    print('🎨 isLoading: $isLoading, messages: ${messages.length}');
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -435,6 +496,14 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                               "ยังไม่มีข้อความ",
                               style: TextStyle(color: Colors.grey[600]),
                             ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "เริ่มต้นการสนทนาได้เลย",
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                       )
@@ -444,13 +513,24 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                         itemCount: messages.length,
                         itemBuilder: (context, index) {
                           final msg = messages[index];
-                          final fromUserId = msg["fromUserId"] is Map
-                              ? msg["fromUserId"]["id"]
-                              : msg["fromUserId"];
-                          final isMe = fromUserId == userId;
+                          
+                          // ตรวจสอบ fromUserId หลายรูปแบบ
+                          String? fromUserId;
+                          if (msg["fromUserId"] is Map) {
+                            fromUserId = msg["fromUserId"]["id"]?.toString() ?? 
+                                        msg["fromUserId"]["_id"]?.toString();
+                          } else {
+                            fromUserId = msg["fromUserId"]?.toString();
+                          }
+                          
+                          // ตรวจสอบ isFromMe
+                          final isFromMe = msg["isFromMe"] ?? 
+                                          (fromUserId != null && fromUserId == userId);
+
+                          print('💬 Message $index: isFromMe=$isFromMe, fromUserId=$fromUserId, myUserId=$userId');
 
                           return Align(
-                            alignment: isMe
+                            alignment: isFromMe
                                 ? Alignment.centerRight
                                 : Alignment.centerLeft,
                             child: Container(
@@ -464,16 +544,16 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                 vertical: 10,
                               ),
                               decoration: BoxDecoration(
-                                color: isMe
+                                color: isFromMe
                                     ? const Color(0xFFA3CFBB)
                                     : Colors.white,
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(16),
                                   topRight: const Radius.circular(16),
                                   bottomLeft:
-                                      Radius.circular(isMe ? 16 : 4),
+                                      Radius.circular(isFromMe ? 16 : 4),
                                   bottomRight:
-                                      Radius.circular(isMe ? 4 : 16),
+                                      Radius.circular(isFromMe ? 4 : 16),
                                 ),
                                 boxShadow: [
                                   BoxShadow(
@@ -490,7 +570,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                   Text(
                                     msg["message"] ?? "",
                                     style: TextStyle(
-                                      color: isMe
+                                      color: isFromMe
                                           ? Colors.white
                                           : Colors.black87,
                                       fontSize: 15,
@@ -503,7 +583,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                         DateTime.parse(msg["createdAt"]),
                                       ),
                                       style: TextStyle(
-                                        color: isMe
+                                        color: isFromMe
                                             ? Colors.white70
                                             : Colors.grey[500],
                                         fontSize: 11,
@@ -573,4 +653,3 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     );
   }
 }
-// ChatDetailPage ต่อในข้อความถัดไป...
