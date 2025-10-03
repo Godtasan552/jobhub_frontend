@@ -15,6 +15,7 @@ import '../screens/notification_screen.dart';
 import '../screens/wallet.dart';
 import '../screens/my_posted_jobs_detail_screen.dart';
 import '../screens/my_posted_jobs_screen.dart';
+import '../screens/edit_job_screen.dart';
 
 class AppPages {
   AppPages._();
@@ -112,6 +113,14 @@ class AppPages {
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
     ),
+    GetPage(
+      name: AppRoutes.EDIT_JOB,
+      page: () => const EditJobScreen(),
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    // เพิ่มใน getPages()
+    
 
     // // Dashboard (แยกจาก BottomNav)
     // GetPage(

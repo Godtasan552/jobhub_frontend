@@ -15,6 +15,8 @@ abstract class AppRoutes {
   static const String MYJOB_FOSTED = '/myjobs';
   static const String MYJOB_DETAIL_POSTED = '/myjob-detail-posted';
   static const String CHAT = '/chat';
+  static const String EDIT_JOB = '/edit-job';
+
 
   // Helper methods สำหรับการนำทาง
   static String getSplashRoute() => SPLASH;
@@ -32,4 +34,5 @@ abstract class AppRoutes {
   static String getmyjobdetailpostedPageRoute() => MYJOB_DETAIL_POSTED;
   
   static String getChatRoute() => CHAT;
+  static String getEditJobRoute() => EDIT_JOB;
 }

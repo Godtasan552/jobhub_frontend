@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:get/get.dart';
 import '../model/job_model.dart';
 import '../services/job_service.dart';
+import '../routes/app_routes.dart'; // ← เพิ่มบรรทัดนี้
 
 class MyJobDetailScreen extends StatefulWidget {
   const MyJobDetailScreen({super.key});
@@ -80,6 +81,11 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
 
     final result = await JobService.getJobApplications(_job!.id);
 
+    // ✅ เพิ่ม debug
+    print('🔍 Applications result: $result');
+    print('🔍 Applications data: ${result['applications']}');
+    print('🔍 Applications length: ${result['applications']?.length ?? 0}');
+
     if (result['success'] == true) {
       setState(() {
         _applications = result['applications'];
@@ -146,13 +152,19 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
     }
   }
 
-  void _showSnackBar(String message, {bool isError = false, bool isSuccess = false}) {
+  void _showSnackBar(
+    String message, {
+    bool isError = false,
+    bool isSuccess = false,
+  }) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
             Icon(
-              isSuccess ? Icons.check_circle : (isError ? Icons.error : Icons.info),
+              isSuccess
+                  ? Icons.check_circle
+                  : (isError ? Icons.error : Icons.info),
               color: Colors.white,
             ),
             const SizedBox(width: 12),
@@ -205,30 +217,30 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
               child: _isLoadingApplications
                   ? const Center(child: CircularProgressIndicator())
                   : _applications.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.inbox, size: 64, color: Colors.grey[300]),
-                              const SizedBox(height: 16),
-                              Text(
-                                'ยังไม่มีผู้สมัคร',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.inbox, size: 64, color: Colors.grey[300]),
+                          const SizedBox(height: 16),
+                          Text(
+                            'ยังไม่มีผู้สมัคร',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
                           ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                          itemCount: _applications.length,
-                          itemBuilder: (context, index) {
-                            final app = _applications[index];
-                            return _buildApplicationCard(app);
-                          },
-                        ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      itemCount: _applications.length,
+                      itemBuilder: (context, index) {
+                        final app = _applications[index];
+                        return _buildApplicationCard(app);
+                      },
+                    ),
             ),
           ],
         ),
@@ -237,11 +249,52 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
   }
 
   Widget _buildApplicationCard(dynamic application) {
-    final worker = application['workerId'];
-    final coverLetter = application['coverLetter'] ?? '';
-    final proposedBudget = application['proposedBudget'] ?? 0;
-    final status = application['status'] ?? 'pending';
-    final workerId = worker['_id'] ?? worker['id'];
+    print('🔍 Building card for application: $application');
+
+    // ✅ ตรวจสอบว่า API ส่งแบบไหนมา
+    // รูปแบบที่ 1: {workerId: {...}, coverLetter: "...", proposedBudget: 5000}
+    // รูปแบบที่ 2: {name: "...", email: "...", id: "..."} (แค่ worker object)
+
+    dynamic worker;
+    String coverLetter = '';
+    num proposedBudget = 0;
+    String status = 'pending';
+    String workerId = '';
+    String workerName = '';
+    String workerEmail = '';
+
+    // ตรวจสอบว่าเป็นรูปแบบไหน
+    if (application['workerId'] != null) {
+      // รูปแบบที่ 1: Full application object
+      worker = application['workerId'];
+      coverLetter = application['coverLetter'] ?? '';
+      proposedBudget = application['proposedBudget'] ?? 0;
+      status = application['status'] ?? 'pending';
+      workerId = worker['_id'] ?? worker['id'] ?? '';
+      workerName = worker['name'] ?? 'ไม่ระบุชื่อ';
+      workerEmail = worker['email'] ?? '';
+    } else if (application['name'] != null) {
+      // รูปแบบที่ 2: แค่ worker object (ไม่มี application wrapper)
+      worker = application;
+      workerId = application['_id'] ?? application['id'] ?? '';
+      workerName = application['name'] ?? 'ไม่ระบุชื่อ';
+      workerEmail = application['email'] ?? '';
+      // ใช้ค่า default เพราะไม่มีข้อมูล application
+      coverLetter = 'ไม่มีข้อมูลจดหมายปะหน้า';
+      proposedBudget = 0;
+      status = 'pending';
+    } else {
+      // ไม่รู้จักรูปแบบนี้
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.red[50],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text('ข้อมูลไม่ถูกต้อง: $application'),
+      );
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -250,20 +303,28 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
         color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: accentColor.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header - ข้อมูลผู้สมัคร
           Row(
             children: [
               CircleAvatar(
-                radius: 24,
+                radius: 28,
                 backgroundColor: accentColor,
                 backgroundImage: worker['profilePic'] != null
                     ? NetworkImage(worker['profilePic'])
                     : null,
                 child: worker['profilePic'] == null
-                    ? Icon(Icons.person, color: primaryColor)
+                    ? Icon(Icons.person, color: primaryColor, size: 28)
                     : null,
               ),
               const SizedBox(width: 12),
@@ -272,76 +333,207 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      worker['name'] ?? 'ไม่ระบุชื่อ',
+                      workerName,
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 17,
                         fontWeight: FontWeight.bold,
                         color: primaryColor,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
-                      worker['email'] ?? '',
+                      workerEmail,
                       style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'จดหมายปะหน้า:',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: primaryColor,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            coverLetter,
-            style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'งบประมาณที่เสนอ:',
-                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-              ),
-              Text(
-                '฿${NumberFormat('#,##0').format(proposedBudget)}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
+              // Status badge
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
                 ),
-              ),
-            ],
-          ),
-          if (status == 'pending' && _job?.status == 'active') ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _assignWorker(workerId);
-                },
-                icon: const Icon(Icons.check_circle, size: 20),
-                label: const Text('มอบหมายงาน'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                decoration: BoxDecoration(
+                  color: status == 'pending'
+                      ? Colors.orange[100]
+                      : (status == 'accepted'
+                            ? Colors.green[100]
+                            : Colors.grey[100]),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  status == 'pending'
+                      ? 'รอพิจารณา'
+                      : (status == 'accepted' ? 'ตอบรับแล้ว' : status),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: status == 'pending'
+                        ? Colors.orange[800]
+                        : (status == 'accepted'
+                              ? Colors.green[800]
+                              : Colors.grey[800]),
                   ),
                 ),
               ),
+            ],
+          ),
+
+          const Divider(height: 24),
+
+          // จดหมายปะหน้า
+          if (coverLetter.isNotEmpty) ...[
+            Text(
+              'จดหมายปะหน้า',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: primaryColor,
+              ),
             ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                coverLetter,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[800],
+                  height: 1.4,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
+
+          // งบประมาณที่เสนอ
+          if (proposedBudget > 0) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'งบประมาณที่เสนอ',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '฿${NumberFormat('#,##0').format(proposedBudget)}',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green[700],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // ปุ่มดำเนินการ
+          Row(
+            children: [
+              // ปุ่มแชท
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Get.toNamed(
+                      '/chat',
+                      arguments: {'userId': workerId, 'userName': workerName},
+                    );
+                  },
+                  icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                  label: const Text('แชท'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: primaryColor,
+                    side: BorderSide(color: primaryColor),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+              if (_job?.status == 'active') ...[
+                const SizedBox(width: 12),
+                // ปุ่มมอบหมายงาน
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          title: Row(
+                            children: [
+                              Icon(
+                                Icons.assignment_turned_in,
+                                color: primaryColor,
+                              ),
+                              const SizedBox(width: 8),
+                              const Text('ยืนยันการมอบหมาย'),
+                            ],
+                          ),
+                          content: Text(
+                            'คุณต้องการมอบหมายงานนี้ให้ $workerName ใช่หรือไม่?',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('ยกเลิก'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                Navigator.pop(context);
+                                _assignWorker(workerId);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryColor,
+                              ),
+                              child: const Text('ยืนยัน'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.check_circle, size: 18),
+                    label: const Text('มอบหมายงาน'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );
@@ -484,10 +676,29 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
                 actions: [
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert, color: Colors.white),
-                    onSelected: (value) {
+                    onSelected: (value) async {
                       if (value == 'edit') {
-                        // TODO: Navigate to edit screen
-                        _showSnackBar('ฟีเจอร์แก้ไขกำลังพัฒนา');
+                        // นำทางไปหน้าแก้ไข
+                        final result = await Get.toNamed(
+                          AppRoutes.getEditJobRoute(),
+                          arguments: _job,
+                        );
+
+                        // ถ้าแก้ไขสำเร็จ ให้โหลดข้อมูลใหม่
+                        if (result == true) {
+                          final updatedJob = await JobService.getJobById(
+                            _job!.id,
+                          );
+                          if (updatedJob['success'] == true) {
+                            setState(() {
+                              _job = updatedJob['job'];
+                            });
+                            _showSnackBar(
+                              'โหลดข้อมูลใหม่เรียบร้อย',
+                              isSuccess: true,
+                            );
+                          }
+                        }
                       } else if (value == 'delete') {
                         _deleteJob();
                       }
@@ -620,11 +831,13 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
                           child: Column(
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         const Text(
                                           'งบประมาณ',
@@ -744,8 +957,12 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
                             ),
                           ),
                         ),
-                        if (job.requirements != null && job.requirements!.isNotEmpty) ...[
-                          _buildSectionTitle('คุณสมบัติที่ต้องการ', Icons.checklist),
+                        if (job.requirements != null &&
+                            job.requirements!.isNotEmpty) ...[
+                          _buildSectionTitle(
+                            'คุณสมบัติที่ต้องการ',
+                            Icons.checklist,
+                          ),
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
@@ -760,20 +977,31 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
                               ],
                             ),
                             child: Column(
-                              children: job.requirements!.asMap().entries.map((entry) {
+                              children: job.requirements!.asMap().entries.map((
+                                entry,
+                              ) {
                                 return Padding(
                                   padding: EdgeInsets.only(
-                                    bottom: entry.key == job.requirements!.length - 1 ? 0 : 12,
+                                    bottom:
+                                        entry.key ==
+                                            job.requirements!.length - 1
+                                        ? 0
+                                        : 12,
                                   ),
                                   child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Container(
                                         margin: const EdgeInsets.only(top: 2),
                                         padding: const EdgeInsets.all(4),
                                         decoration: BoxDecoration(
-                                          color: secondaryColor.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(4),
+                                          color: secondaryColor.withOpacity(
+                                            0.2,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                         child: Icon(
                                           Icons.check,

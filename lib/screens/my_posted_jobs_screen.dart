@@ -76,13 +76,19 @@ class _MyJobsScreenState extends State<MyJobsScreen>
     }
   }
 
-  void _showSnackBar(String message, {bool isError = false, bool isSuccess = false}) {
+  void _showSnackBar(
+    String message, {
+    bool isError = false,
+    bool isSuccess = false,
+  }) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
             Icon(
-              isSuccess ? Icons.check_circle : (isError ? Icons.error : Icons.info),
+              isSuccess
+                  ? Icons.check_circle
+                  : (isError ? Icons.error : Icons.info),
               color: Colors.white,
             ),
             const SizedBox(width: 12),
@@ -174,23 +180,14 @@ class _MyJobsScreenState extends State<MyJobsScreen>
             fontWeight: FontWeight.bold,
           ),
           tabs: const [
-            Tab(
-              icon: Icon(Icons.work_outline),
-              text: 'งานที่สมัคร',
-            ),
-            Tab(
-              icon: Icon(Icons.post_add),
-              text: 'งานที่โพส',
-            ),
+            Tab(icon: Icon(Icons.work_outline), text: 'งานที่สมัคร'),
+            Tab(icon: Icon(Icons.post_add), text: 'งานที่โพส'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [
-          _buildAppliedJobsTab(),
-          _buildCreatedJobsTab(),
-        ],
+        children: [_buildAppliedJobsTab(), _buildCreatedJobsTab()],
       ),
     );
   }
@@ -260,10 +257,8 @@ class _MyJobsScreenState extends State<MyJobsScreen>
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: _createdJobs.length,
-        itemBuilder: (context, index) => _buildJobCard(
-          _createdJobs[index],
-          isCreator: true,
-        ),
+        itemBuilder: (context, index) =>
+            _buildJobCard(_createdJobs[index], isCreator: true),
       ),
     );
   }
@@ -287,12 +282,18 @@ class _MyJobsScreenState extends State<MyJobsScreen>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
+          onTap: () async {
             if (isCreator) {
-              Get.toNamed(
+              // ✅ รอผลลัพธ์จากหน้า detail
+              final result = await Get.toNamed(
                 AppRoutes.getmyjobdetailpostedPageRoute(),
                 arguments: job,
               );
+
+              // ✅ ถ้าลบงานสำเร็จ (result = true) ให้โหลดข้อมูลใหม่
+              if (result == true) {
+                _loadCreatedJobs();
+              }
             } else {
               Get.toNamed(AppRoutes.getJobDetailRoute(), arguments: job);
             }
@@ -384,11 +385,10 @@ class _MyJobsScreenState extends State<MyJobsScreen>
                     const Spacer(),
                     Row(
                       children: [
-                        Icon(Icons.attach_money, size: 26, color: Colors.green),
                         const SizedBox(width: 4),
                         Text(
-                          '฿${formatter.format(job.budget)}',
-                          style: TextStyle(
+                          '${formatter.format(job.budget)} THB',
+                          style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: Colors.green,

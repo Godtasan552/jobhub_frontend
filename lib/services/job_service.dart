@@ -93,16 +93,17 @@ class JobService {
   }) async {
     try {
       final token = AuthService.getToken();
-      
+
       // สร้าง query parameters
       Map<String, String> queryParams = {};
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
-      if (category != null && category.isNotEmpty) queryParams['category'] = category;
+      if (category != null && category.isNotEmpty)
+        queryParams['category'] = category;
       if (type != null && type.isNotEmpty) queryParams['type'] = type;
 
-      final url = Uri.parse('$baseUrl/api/v1/jobs/search').replace(
-        queryParameters: queryParams.isNotEmpty ? queryParams : null,
-      );
+      final url = Uri.parse(
+        '$baseUrl/api/v1/jobs/search',
+      ).replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
       print('🔎 Searching jobs: $url');
 
@@ -345,9 +346,7 @@ class JobService {
 
       final response = await http.delete(
         url,
-        headers: {
-          "Authorization": "Bearer $token",
-        },
+        headers: {"Authorization": "Bearer $token"},
       );
 
       print('📡 Response status: ${response.statusCode}');
@@ -355,10 +354,7 @@ class JobService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        return {
-          'success': true,
-          'message': data['message'] ?? 'ลบงานสำเร็จ',
-        };
+        return {'success': true, 'message': data['message'] ?? 'ลบงานสำเร็จ'};
       }
 
       return {
@@ -430,6 +426,7 @@ class JobService {
   }
 
   /// GET /api/v1/jobs/:id/applications - ดูใบสมัครงาน (เจ้าของงาน)
+  /// GET /api/v1/jobs/:id/applications - ดูใบสมัครงาน (เจ้าของงาน)
   static Future<Map<String, dynamic>> getJobApplications(String jobId) async {
     try {
       final token = AuthService.getToken();
@@ -438,25 +435,33 @@ class JobService {
       }
 
       final url = Uri.parse('$baseUrl/api/v1/jobs/$jobId/applications');
-
       print('📋 Fetching job applications: $url');
 
       final response = await http.get(
         url,
-        headers: {
-          "Authorization": "Bearer $token",
-        },
+        headers: {"Authorization": "Bearer $token"},
       );
 
       print('📡 Response status: ${response.statusCode}');
-
       final data = jsonDecode(response.body);
 
       if (data['success'] == true) {
-        return {
-          'success': true,
-          'applications': data['data'],
-        };
+        // ✅ แก้ไขตรงนี้
+        var applicationsData = data['data'];
+        List<dynamic> applicationsList;
+
+        if (applicationsData is List) {
+          applicationsList = applicationsData;
+        } else if (applicationsData is Map) {
+          applicationsList =
+              applicationsData['applications'] ??
+              applicationsData['data'] ??
+              [];
+        } else {
+          applicationsList = [];
+        }
+
+        return {'success': true, 'applications': applicationsList};
       }
 
       return {
@@ -490,9 +495,7 @@ class JobService {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",
         },
-        body: jsonEncode({
-          "workerId": workerId,
-        }),
+        body: jsonEncode({"workerId": workerId}),
       );
 
       print('📡 Response status: ${response.statusCode}');
