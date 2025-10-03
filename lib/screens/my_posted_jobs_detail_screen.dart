@@ -139,16 +139,37 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
   }
 
   Future<void> _assignWorker(String workerId) async {
-    final result = await JobService.assignJob(
-      jobId: _job!.id,
-      workerId: workerId,
+    // ✅ เพิ่ม loading dialog
+    Get.dialog(
+      const Center(child: CircularProgressIndicator()),
+      barrierDismissible: false,
     );
 
-    if (result['success'] == true) {
-      _showSnackBar('มอบหมายงานสำเร็จ', isSuccess: true);
-      setState(() => _job = result['job']);
-    } else {
-      _showSnackBar(result['message'], isError: true);
+    try {
+      final result = await JobService.assignJob(
+        jobId: _job!.id,
+        workerId: workerId,
+      );
+
+      Get.back(); // ✅ ปิด loading
+
+      if (result['success'] == true) {
+        _showSnackBar('มอบหมายงานสำเร็จ', isSuccess: true);
+
+        // ✅ รีเฟรชข้อมูลงาน
+        final updatedJob = await JobService.getJobById(_job!.id);
+        if (updatedJob['success'] == true) {
+          setState(() => _job = updatedJob['job']);
+        }
+
+        // ✅ รีเฟรช applications
+        _loadApplications();
+      } else {
+        _showSnackBar(result['message'], isError: true);
+      }
+    } catch (e) {
+      Get.back(); // ✅ ปิด loading ถ้า error
+      _showSnackBar('เกิดข้อผิดพลาด: $e', isError: true);
     }
   }
 

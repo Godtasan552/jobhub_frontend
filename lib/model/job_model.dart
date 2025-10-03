@@ -22,12 +22,7 @@ class EmployerModel {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'email': email,
-      'profilePic': profilePic,
-    };
+    return {'id': id, 'name': name, 'email': email, 'profilePic': profilePic};
   }
 }
 
@@ -94,7 +89,7 @@ class JobModel {
   }
 
   factory JobModel.fromJson(Map<String, dynamic> json) {
-    // จัดการ employerId ที่อาจเป็น String หรือ Object
+    // จัดการ employerId
     dynamic employerIdValue;
     if (json['employerId'] is String) {
       employerIdValue = json['employerId'];
@@ -102,6 +97,16 @@ class JobModel {
       employerIdValue = EmployerModel.fromJson(json['employerId']);
     } else {
       employerIdValue = '';
+    }
+
+    // ✅ จัดการ workerId ที่อาจเป็น String หรือ Object
+    String? workerIdValue;
+    if (json['workerId'] is String) {
+      workerIdValue = json['workerId'];
+    } else if (json['workerId'] is Map<String, dynamic>) {
+      workerIdValue = json['workerId']['_id'] ?? json['workerId']['id'];
+    } else {
+      workerIdValue = null;
     }
 
     return JobModel(
@@ -112,23 +117,23 @@ class JobModel {
       category: json['category'] ?? '',
       budget: (json['budget'] ?? 0).toDouble(),
       duration: json['duration'] ?? '',
-      deadline: json['deadline'] != null 
-          ? DateTime.parse(json['deadline']) 
+      deadline: json['deadline'] != null
+          ? DateTime.parse(json['deadline'])
           : null,
       employerId: employerIdValue,
-      workerId: json['workerId'],
+      workerId: workerIdValue, // ✅ ใช้ค่าที่แปลงแล้ว
       status: json['status'] ?? 'active',
-      requirements: json['requirements'] != null 
-          ? List<String>.from(json['requirements']) 
+      requirements: json['requirements'] != null
+          ? List<String>.from(json['requirements'])
           : null,
-      attachments: json['attachments'] != null 
-          ? List<String>.from(json['attachments']) 
+      attachments: json['attachments'] != null
+          ? List<String>.from(json['attachments'])
           : null,
-      applicants: json['applicants'] != null 
-          ? List<String>.from(json['applicants']) 
+      applicants: json['applicants'] != null
+          ? List<String>.from(json['applicants'])
           : [],
-      milestones: json['milestones'] != null 
-          ? List<String>.from(json['milestones']) 
+      milestones: json['milestones'] != null
+          ? List<String>.from(json['milestones'])
           : null,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
