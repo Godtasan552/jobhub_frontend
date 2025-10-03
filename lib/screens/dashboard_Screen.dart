@@ -319,28 +319,41 @@ GestureDetector(
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'งานที่เหมาะกับคุณ',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: primaryColor,
+  return Padding(
+    padding: const EdgeInsets.all(20),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // ด้านซ้าย
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'งานทั้งหมดของฉัน',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: primaryColor,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${_filteredJobs.length} งานที่พร้อมให้คุณสมัคร',
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-          ),
-        ],
-      ),
-    );
-  }
+            const SizedBox(height: 8),
+            Text(
+              '${_filteredJobs.length} งานที่พร้อมให้คุณสมัคร',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+
+        // ด้านขวา → ปุ่ม
+        ElevatedButton(
+          onPressed: () => Get.toNamed(AppRoutes.getmyjobpostedPageRoute()),
+          child: const Text('งานของฉัน'),
+        ),
+      ],
+    ),
+  );
+}
+
 
   Widget _buildCategoryFilter() {
     return Column(

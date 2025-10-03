@@ -13,6 +13,8 @@ import '../screens/profilePage.dart';
 import '../screens/dashboard_Screen.dart';
 import '../screens/notification_screen.dart';
 import '../screens/wallet.dart';
+import '../screens/my_posted_jobs_detail_screen.dart';
+import '../screens/my_posted_jobs_screen.dart';
 
 class AppPages {
   AppPages._();
@@ -88,6 +90,18 @@ class AppPages {
     GetPage(
       name: AppRoutes.WALLET_PAGE,
       page: () => const WalletPage(),
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.MYJOB_FOSTED,
+      page: () => const MyJobsScreen(),
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.MYJOB_DETAIL_POSTED,
+      page: () => const MyJobDetailScreen(),
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
     ),
