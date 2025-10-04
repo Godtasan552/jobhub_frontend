@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 import 'package:get/get.dart';
 import '../model/job_model.dart';
 import '../services/job_service.dart';
-import '../routes/app_routes.dart'; // ← เพิ่มบรรทัดนี้
+import '../services/wallet_service.dart';
+import '../routes/app_routes.dart';
+import '../model/application_model.dart';
 
 class MyJobDetailScreen extends StatefulWidget {
   const MyJobDetailScreen({super.key});
@@ -81,14 +83,11 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
 
     final result = await JobService.getJobApplications(_job!.id);
 
-    // ✅ เพิ่ม debug
-    print('🔍 Applications result: $result');
-    print('🔍 Applications data: ${result['applications']}');
-    print('🔍 Applications length: ${result['applications']?.length ?? 0}');
-
     if (result['success'] == true) {
       setState(() {
-        _applications = result['applications'];
+        _applications = (result['applications'] as List)
+            .map((app) => ApplicationModel.fromJson(app))
+            .toList();
         _isLoadingApplications = false;
       });
     } else {
@@ -139,7 +138,6 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
   }
 
   Future<void> _assignWorker(String workerId) async {
-    // ✅ เพิ่ม loading dialog
     Get.dialog(
       const Center(child: CircularProgressIndicator()),
       barrierDismissible: false,
@@ -151,26 +149,106 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
         workerId: workerId,
       );
 
-      Get.back(); // ✅ ปิด loading
+      Get.back();
 
       if (result['success'] == true) {
         _showSnackBar('มอบหมายงานสำเร็จ', isSuccess: true);
-
-        // ✅ รีเฟรชข้อมูลงาน
-        final updatedJob = await JobService.getJobById(_job!.id);
-        if (updatedJob['success'] == true) {
-          setState(() => _job = updatedJob['job']);
-        }
-
-        // ✅ รีเฟรช applications
-        _loadApplications();
+        await _refreshJobData();
       } else {
         _showSnackBar(result['message'], isError: true);
       }
     } catch (e) {
-      Get.back(); // ✅ ปิด loading ถ้า error
+      Get.back();
       _showSnackBar('เกิดข้อผิดพลาด: $e', isError: true);
+      print('❌ assignWorker Error: $e');
     }
+  }
+
+  Future<void> _refreshJobData() async {
+    final updatedJob = await JobService.getJobById(_job!.id);
+    if (updatedJob['success'] == true) {
+      setState(() => _job = updatedJob['job']);
+    }
+    await _loadApplications();
+  }
+
+  Future<void> _showCompleteJobDialog() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.task_alt, color: Colors.green[700]),
+            const SizedBox(width: 8),
+            const Text('ยืนยันงานเสร็จสิ้น'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('ยืนยันว่างานนี้เสร็จสมบูรณ์แล้ว?'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber[50],
+                border: Border.all(color: Colors.amber[200]!),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.amber[700], size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'ระบบจะโอนเงิน ฿${NumberFormat('#,##0').format(_job!.budget)} ให้ผู้รับงานทันที',
+                      style: TextStyle(fontSize: 12, color: Colors.amber[900]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('ยกเลิก'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700]),
+            child: const Text('ยืนยัน'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _completeJobAndPay();
+    }
+  }
+
+  Future<void> _completeJobAndPay() async {
+    if (_job?.workerId == null || _job!.workerId!.isEmpty) {
+      _showSnackBar('ยังไม่มีการมอบหมายงานให้ใคร', isError: true);
+      return;
+    }
+
+    // แสดง Mock Payment Flow
+    await _showMockPaymentFlow();
+  }
+
+  Future<void> _showMockPaymentFlow() async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _MockPaymentDialog(job: _job!),
+    );
+
+    _showSnackBar('การทดสอบ: จำลองการชำระเงินสำเร็จ', isSuccess: true);
   }
 
   void _showSnackBar(
@@ -270,42 +348,7 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
   }
 
   Widget _buildApplicationCard(dynamic application) {
-    print('🔍 Building card for application: $application');
-
-    // ✅ ตรวจสอบว่า API ส่งแบบไหนมา
-    // รูปแบบที่ 1: {workerId: {...}, coverLetter: "...", proposedBudget: 5000}
-    // รูปแบบที่ 2: {name: "...", email: "...", id: "..."} (แค่ worker object)
-
-    dynamic worker;
-    String coverLetter = '';
-    num proposedBudget = 0;
-    String status = 'pending';
-    String workerId = '';
-    String workerName = '';
-    String workerEmail = '';
-
-    // ตรวจสอบว่าเป็นรูปแบบไหน
-    if (application['workerId'] != null) {
-      // รูปแบบที่ 1: Full application object
-      worker = application['workerId'];
-      coverLetter = application['coverLetter'] ?? '';
-      proposedBudget = application['proposedBudget'] ?? 0;
-      status = application['status'] ?? 'pending';
-      workerId = worker['_id'] ?? worker['id'] ?? '';
-      workerName = worker['name'] ?? 'ไม่ระบุชื่อ';
-      workerEmail = worker['email'] ?? '';
-    } else if (application['name'] != null) {
-      // รูปแบบที่ 2: แค่ worker object (ไม่มี application wrapper)
-      worker = application;
-      workerId = application['_id'] ?? application['id'] ?? '';
-      workerName = application['name'] ?? 'ไม่ระบุชื่อ';
-      workerEmail = application['email'] ?? '';
-      // ใช้ค่า default เพราะไม่มีข้อมูล application
-      coverLetter = 'ไม่มีข้อมูลจดหมายปะหน้า';
-      proposedBudget = 0;
-      status = 'pending';
-    } else {
-      // ไม่รู้จักรูปแบบนี้
+    if (application is! ApplicationModel) {
       return Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
@@ -313,9 +356,11 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
           color: Colors.red[50],
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Text('ข้อมูลไม่ถูกต้อง: $application'),
+        child: Text('ข้อมูลไม่ถูกต้อง: ต้องเป็น ApplicationModel'),
       );
     }
+
+    final app = application as ApplicationModel;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -335,16 +380,15 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header - ข้อมูลผู้สมัคร
           Row(
             children: [
               CircleAvatar(
                 radius: 28,
                 backgroundColor: accentColor,
-                backgroundImage: worker['profilePic'] != null
-                    ? NetworkImage(worker['profilePic'])
+                backgroundImage: app.workerProfilePic != null
+                    ? NetworkImage(app.workerProfilePic!)
                     : null,
-                child: worker['profilePic'] == null
+                child: app.workerProfilePic == null
                     ? Icon(Icons.person, color: primaryColor, size: 28)
                     : null,
               ),
@@ -354,7 +398,7 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      workerName,
+                      app.workerName,
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
@@ -363,37 +407,36 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      workerEmail,
+                      app.workerEmail,
                       style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              // Status badge
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: status == 'pending'
+                  color: app.status == 'pending'
                       ? Colors.orange[100]
-                      : (status == 'accepted'
+                      : (app.status == 'accepted'
                             ? Colors.green[100]
                             : Colors.grey[100]),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  status == 'pending'
+                  app.status == 'pending'
                       ? 'รอพิจารณา'
-                      : (status == 'accepted' ? 'ตอบรับแล้ว' : status),
+                      : (app.status == 'accepted' ? 'ตอบรับแล้ว' : app.status),
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: status == 'pending'
+                    color: app.status == 'pending'
                         ? Colors.orange[800]
-                        : (status == 'accepted'
+                        : (app.status == 'accepted'
                               ? Colors.green[800]
                               : Colors.grey[800]),
                   ),
@@ -401,11 +444,9 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
               ),
             ],
           ),
-
           const Divider(height: 24),
-
-          // จดหมายปะหน้า
-          if (coverLetter.isNotEmpty) ...[
+          if (app.coverLetter.isNotEmpty &&
+              app.coverLetter != 'ไม่มีข้อมูลจดหมายปะหน้า') ...[
             Text(
               'จดหมายปะหน้า',
               style: TextStyle(
@@ -422,7 +463,7 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                coverLetter,
+                app.coverLetter,
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[800],
@@ -432,9 +473,7 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
             ),
             const SizedBox(height: 16),
           ],
-
-          // งบประมาณที่เสนอ
-          if (proposedBudget > 0) ...[
+          if (app.proposedBudget > 0) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -456,7 +495,7 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '฿${NumberFormat('#,##0').format(proposedBudget)}',
+                    '฿${NumberFormat('#,##0').format(app.proposedBudget)}',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -468,18 +507,18 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
             ),
             const SizedBox(height: 16),
           ],
-
-          // ปุ่มดำเนินการ
           Row(
             children: [
-              // ปุ่มแชท
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () {
                     Navigator.pop(context);
                     Get.toNamed(
-                      '/chat',
-                      arguments: {'userId': workerId, 'userName': workerName},
+                      AppRoutes.getChatRoute(),
+                      arguments: {
+                        'userId': app.workerId,
+                        'userName': app.workerName,
+                      },
                     );
                   },
                   icon: const Icon(Icons.chat_bubble_outline, size: 18),
@@ -496,7 +535,6 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
               ),
               if (_job?.status == 'active') ...[
                 const SizedBox(width: 12),
-                // ปุ่มมอบหมายงาน
                 Expanded(
                   flex: 2,
                   child: ElevatedButton.icon(
@@ -518,7 +556,7 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
                             ],
                           ),
                           content: Text(
-                            'คุณต้องการมอบหมายงานนี้ให้ $workerName ใช่หรือไม่?',
+                            'คุณต้องการมอบหมายงานนี้ให้ ${app.workerName} ใช่หรือไม่?',
                           ),
                           actions: [
                             TextButton(
@@ -529,7 +567,7 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
                               onPressed: () {
                                 Navigator.pop(ctx);
                                 Navigator.pop(context);
-                                _assignWorker(workerId);
+                                _assignWorker(app.workerId);
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: primaryColor,
@@ -695,17 +733,21 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
                 pinned: true,
                 backgroundColor: primaryColor,
                 actions: [
+                  if (job.status == 'in_progress')
+                    IconButton(
+                      icon: const Icon(Icons.check_circle_outline),
+                      tooltip: 'งานเสร็จสิ้น',
+                      onPressed: _showCompleteJobDialog,
+                    ),
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert, color: Colors.white),
                     onSelected: (value) async {
                       if (value == 'edit') {
-                        // นำทางไปหน้าแก้ไข
                         final result = await Get.toNamed(
                           AppRoutes.getEditJobRoute(),
                           arguments: _job,
                         );
 
-                        // ถ้าแก้ไขสำเร็จ ให้โหลดข้อมูลใหม่
                         if (result == true) {
                           final updatedJob = await JobService.getJobById(
                             _job!.id,
@@ -1103,6 +1145,189 @@ class _MyJobDetailScreenState extends State<MyJobDetailScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// Mock Payment Dialog Widget
+class _MockPaymentDialog extends StatefulWidget {
+  final JobModel job;
+
+  const _MockPaymentDialog({required this.job});
+
+  @override
+  State<_MockPaymentDialog> createState() => _MockPaymentDialogState();
+}
+
+class _MockPaymentDialogState extends State<_MockPaymentDialog> {
+  int _currentStep = 0;
+
+  final List<String> _steps = [
+    'กำลังตรวจสอบสถานะงาน...',
+    'กำลังอัพเดทสถานะเป็น completed...',
+    'กำลังโอนเงินให้ผู้รับงาน...',
+    'เสร็จสิ้น',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _simulatePayment();
+  }
+
+  Future<void> _simulatePayment() async {
+    for (int i = 0; i < _steps.length; i++) {
+      await Future.delayed(const Duration(milliseconds: 1200));
+      if (mounted) {
+        setState(() => _currentStep = i);
+      }
+    }
+
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (mounted) {
+      Navigator.pop(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isComplete = _currentStep == _steps.length - 1;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isComplete ? Colors.green[50] : Colors.blue[50],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isComplete ? Icons.check_circle : Icons.payments,
+                    color: isComplete ? Colors.green[700] : Colors.blue[700],
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isComplete ? 'ชำระเงินสำเร็จ' : 'กำลังดำเนินการ',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '฿${NumberFormat('#,##0').format(widget.job.budget)}',
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // Progress Steps
+            ...List.generate(_steps.length, (index) {
+              final isDone = index < _currentStep;
+              final isCurrent = index == _currentStep;
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: isDone || isCurrent
+                            ? (isComplete && index == _steps.length - 1
+                                  ? Colors.green[700]
+                                  : Colors.blue[700])
+                            : Colors.grey[300],
+                        shape: BoxShape.circle,
+                      ),
+                      child: isDone
+                          ? const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 16,
+                            )
+                          : (isCurrent && !isComplete
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: Padding(
+                                      padding: EdgeInsets.all(4),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
+                                      ),
+                                    ),
+                                  )
+                                : null),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _steps[index],
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isCurrent || isDone
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                          color: isCurrent || isDone
+                              ? Colors.black87
+                              : Colors.grey[500],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+
+            const SizedBox(height: 16),
+
+            // Mock Warning
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.science, color: Colors.orange[700], size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'โหมดทดสอบ - ไม่มีการเรียก API จริง',
+                      style: TextStyle(fontSize: 11, color: Colors.orange[900]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
